@@ -7,7 +7,7 @@ module.exports = {
       "SELECT id FROM users WHERE role = 'admin' LIMIT 1",
       { type: Sequelize.QueryTypes.SELECT }
     );
-
+ 
     const now = new Date();
     const announcements = [];
     const audiences = ['all', 'students', 'teachers', 'parents', 'staff'];

@@ -49,7 +49,7 @@ module.exports = {
       {
         name: 'Grade 2-A',
         section: 'A',
-        capacity: 30,
+        capacity: 30, 
         classroom: 'Room 201',
         class_teacher_id: teachers[2]?.id || null,
         academic_year: academicYear,

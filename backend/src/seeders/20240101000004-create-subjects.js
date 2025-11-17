@@ -14,7 +14,7 @@ module.exports = {
       console.log('Subjects already exist, skipping...');
       return;
     }
-
+ 
     const subjects = [
       {
         name: 'Mathematics',

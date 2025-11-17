@@ -12,7 +12,7 @@ module.exports = {
       console.log('Payments already exist, skipping...');
       return;
     }
-
+ 
     // Get fees and users (for processed_by)
     const fees = await queryInterface.sequelize.query(
       "SELECT id, amount, student_id FROM fees WHERE status IN ('paid', 'partial') ORDER BY id",

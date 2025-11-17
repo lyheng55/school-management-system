@@ -17,7 +17,7 @@ module.exports = {
           username: 'admin',
           email: 'admin@school.com',
           password: hashedPassword,
-          role: 'admin',
+          role: 'admin', 
           is_active: true,
           created_at: new Date(),
           updated_at: new Date()

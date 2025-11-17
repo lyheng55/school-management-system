@@ -12,7 +12,7 @@ module.exports = {
     if (existingParentUsers.length > 0) {
       console.log('Parent users already exist, skipping...');
       return;
-    }
+    } 
 
     const hashedPassword = await bcrypt.hash('parent123', 10);
     const now = new Date();

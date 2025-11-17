@@ -19,7 +19,7 @@ module.exports = {
 
     // Create teacher users
     const teachers = [
-      {
+      { 
         username: 'teacher1',
         email: 'john.smith@school.com',
         password: hashedPassword,

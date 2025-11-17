@@ -18,7 +18,7 @@ module.exports = {
       leadership: ['Class President', 'Student Council', 'Team Leader', 'Volunteer Award', 'Community Service'],
       other: ['Perfect Attendance', 'Most Improved', 'Citizenship Award', 'Friendliest Student', 'Most Helpful']
     };
-
+ 
     // Create achievements for students
     students.forEach((student, studentIdx) => {
       // 1-2 achievements per student

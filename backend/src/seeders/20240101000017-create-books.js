@@ -12,7 +12,7 @@ module.exports = {
       console.log('Books already exist, skipping...');
       return;
     }
-
+ 
     const now = new Date();
     const books = [];
     const categories = ['Fiction', 'Non-Fiction', 'Science', 'Mathematics', 'History', 'Literature', 'Reference'];

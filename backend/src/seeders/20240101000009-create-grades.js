@@ -12,7 +12,7 @@ module.exports = {
       console.log('Grades already exist, skipping...');
       return;
     }
-
+ 
     // Get students, exams, subjects, and teacher users
     const students = await queryInterface.sequelize.query(
       "SELECT id FROM students ORDER BY id LIMIT 30",

@@ -14,7 +14,7 @@ module.exports = {
     const teachers = await queryInterface.sequelize.query(
       "SELECT id FROM teachers ORDER BY id",
       { type: Sequelize.QueryTypes.SELECT }
-    );
+    ); 
 
     const now = new Date();
     const exams = [];

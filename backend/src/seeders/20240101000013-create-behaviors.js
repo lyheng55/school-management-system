@@ -10,7 +10,7 @@ module.exports = {
     const teacherUsers = await queryInterface.sequelize.query(
       "SELECT u.id FROM users u INNER JOIN teachers t ON u.id = t.user_id WHERE u.role = 'teacher' ORDER BY u.id",
       { type: Sequelize.QueryTypes.SELECT }
-    );
+    ); 
 
     const now = new Date();
     const behaviors = [];

@@ -12,7 +12,7 @@ module.exports = {
     if (existingStudentUsers.length > 0) {
       console.log('Student users already exist, skipping...');
       return;
-    }
+    } 
 
     const hashedPassword = await bcrypt.hash('student123', 10);
     const now = new Date();

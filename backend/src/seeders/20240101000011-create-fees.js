@@ -18,7 +18,7 @@ module.exports = {
       'sports': 75.00,
       'lab': 100.00
     };
-
+ 
     // Create fees for each student
     students.forEach((student, studentIdx) => {
       feeTypes.forEach((feeType, typeIdx) => {

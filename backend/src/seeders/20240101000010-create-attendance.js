@@ -11,7 +11,7 @@ module.exports = {
     if (existingAttendance.length > 0) {
       console.log('Attendance records already exist, skipping...');
       return;
-    }
+    } 
 
     // Get students, classes, and teacher users
     const students = await queryInterface.sequelize.query(
