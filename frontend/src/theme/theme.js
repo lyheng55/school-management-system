@@ -24,16 +24,61 @@ const englishFontStack = [
   'sans-serif',
 ].join(',');
 
-export const createAppTheme = (language = 'en') => {
+export const createAppTheme = (language = 'en', mode = 'light') => {
   const isKhmer = language === 'km';
+  const isDark = mode === 'dark';
   
   return createTheme({
     palette: {
+      mode: isDark ? 'dark' : 'light',
       primary: {
-        main: '#1976d2',
+        main: isDark ? '#90caf9' : '#1976d2',
+        light: isDark ? '#e3f2fd' : '#42a5f5',
+        dark: isDark ? '#42a5f5' : '#1565c0',
+        contrastText: isDark ? '#000000' : '#ffffff',
       },
       secondary: {
-        main: '#dc004e',
+        main: isDark ? '#f48fb1' : '#dc004e',
+        light: isDark ? '#fce4ec' : '#ff5983',
+        dark: isDark ? '#c2185b' : '#9a0036',
+        contrastText: isDark ? '#000000' : '#ffffff',
+      },
+      error: {
+        main: isDark ? '#f44336' : '#d32f2f',
+        light: isDark ? '#e57373' : '#ef5350',
+        dark: isDark ? '#d32f2f' : '#c62828',
+      },
+      warning: {
+        main: isDark ? '#ffa726' : '#ed6c02',
+        light: isDark ? '#ffb74d' : '#ff9800',
+        dark: isDark ? '#f57c00' : '#e65100',
+      },
+      info: {
+        main: isDark ? '#29b6f6' : '#0288d1',
+        light: isDark ? '#4fc3f7' : '#03a9f4',
+        dark: isDark ? '#0288d1' : '#01579b',
+      },
+      success: {
+        main: isDark ? '#66bb6a' : '#2e7d32',
+        light: isDark ? '#81c784' : '#4caf50',
+        dark: isDark ? '#388e3c' : '#1b5e20',
+      },
+      background: {
+        default: isDark ? '#121212' : '#f5f5f5',
+        paper: isDark ? '#1e1e1e' : '#ffffff',
+      },
+      text: {
+        primary: isDark ? '#ffffff' : 'rgba(0, 0, 0, 0.87)',
+        secondary: isDark ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)',
+        disabled: isDark ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.38)',
+      },
+      divider: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)',
+      action: {
+        active: isDark ? '#ffffff' : 'rgba(0, 0, 0, 0.54)',
+        hover: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+        selected: isDark ? 'rgba(255, 255, 255, 0.16)' : 'rgba(0, 0, 0, 0.08)',
+        disabled: isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.26)',
+        disabledBackground: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)',
       },
     },
     typography: {
@@ -123,6 +168,17 @@ export const createAppTheme = (language = 'en') => {
         styleOverrides: {
           root: {
             fontFamily: isKhmer ? khmerFontStack : englishFontStack,
+            ...(isDark && {
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderColor: 'rgba(255, 255, 255, 0.23)',
+              },
+              '&:hover .MuiOutlinedInput-notchedOutline': {
+                borderColor: 'rgba(255, 255, 255, 0.5)',
+              },
+              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                borderColor: '#90caf9',
+              },
+            }),
           },
           input: {
             fontFamily: isKhmer ? khmerFontStack : englishFontStack,
@@ -133,6 +189,17 @@ export const createAppTheme = (language = 'en') => {
         styleOverrides: {
           root: {
             fontFamily: isKhmer ? khmerFontStack : englishFontStack,
+            ...(isDark && {
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+              },
+              '&.Mui-selected': {
+                backgroundColor: 'rgba(144, 202, 249, 0.16)',
+                '&:hover': {
+                  backgroundColor: 'rgba(144, 202, 249, 0.24)',
+                },
+              },
+            }),
           },
         },
       },
@@ -140,6 +207,15 @@ export const createAppTheme = (language = 'en') => {
         styleOverrides: {
           root: {
             fontFamily: isKhmer ? khmerFontStack : englishFontStack,
+            ...(isDark && {
+              borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
+            }),
+          },
+          head: {
+            ...(isDark && {
+              color: 'rgba(255, 255, 255, 0.87)',
+              fontWeight: 600,
+            }),
           },
         },
       },
@@ -150,6 +226,102 @@ export const createAppTheme = (language = 'en') => {
           },
           secondary: {
             fontFamily: isKhmer ? khmerFontStack : englishFontStack,
+          },
+        },
+      },
+      MuiPaper: {
+        styleOverrides: {
+          root: {
+            ...(isDark && {
+              backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.05))',
+            }),
+          },
+        },
+      },
+      MuiAppBar: {
+        styleOverrides: {
+          root: {
+            ...(isDark && {
+              backgroundColor: '#1e1e1e',
+              color: '#ffffff',
+            }),
+          },
+        },
+      },
+      MuiDrawer: {
+        styleOverrides: {
+          paper: {
+            ...(isDark && {
+              backgroundColor: '#1e1e1e',
+              color: '#ffffff',
+            }),
+          },
+        },
+      },
+      MuiCard: {
+        styleOverrides: {
+          root: {
+            ...(isDark && {
+              backgroundColor: '#1e1e1e',
+              backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.05))',
+            }),
+          },
+        },
+      },
+      MuiChip: {
+        styleOverrides: {
+          root: {
+            ...(isDark && {
+              backgroundColor: 'rgba(255, 255, 255, 0.12)',
+              color: '#ffffff',
+            }),
+          },
+        },
+      },
+      MuiDivider: {
+        styleOverrides: {
+          root: {
+            ...(isDark && {
+              borderColor: 'rgba(255, 255, 255, 0.12)',
+            }),
+          },
+        },
+      },
+      MuiSelect: {
+        styleOverrides: {
+          root: {
+            ...(isDark && {
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderColor: 'rgba(255, 255, 255, 0.23)',
+              },
+              '&:hover .MuiOutlinedInput-notchedOutline': {
+                borderColor: 'rgba(255, 255, 255, 0.5)',
+              },
+              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                borderColor: '#90caf9',
+              },
+            }),
+          },
+        },
+      },
+      MuiTab: {
+        styleOverrides: {
+          root: {
+            ...(isDark && {
+              color: 'rgba(255, 255, 255, 0.7)',
+              '&.Mui-selected': {
+                color: '#90caf9',
+              },
+            }),
+          },
+        },
+      },
+      MuiAlert: {
+        styleOverrides: {
+          root: {
+            ...(isDark && {
+              backgroundColor: 'rgba(18, 18, 18, 0.9)',
+            }),
           },
         },
       },

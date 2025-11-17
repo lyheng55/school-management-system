@@ -48,6 +48,7 @@
     "success": "Success",
     "error": "Error",
     "failed": "Failed",
+    "accessDenied": "Access denied. Insufficient permissions",
     "required": "Required",
     "optional": "Optional",
     "total": "Total",
@@ -78,6 +79,7 @@
     "dashboard": "Dashboard",
     "students": "Students",
     "teachers": "Teachers",
+    "parents": "Parents",
     "classes": "Classes",
     "subjects": "Subjects",
     "timetables": "Timetables",
@@ -797,6 +799,12 @@
     "english": "English",
     "khmer": "ភាសាខ្មែរ"
   },
+  "theme": {
+    "switchToLight": "Switch to light mode",
+    "switchToDark": "Switch to dark mode",
+    "light": "Light",
+    "dark": "Dark"
+  },
   "parents": {
     "title": "Parents",
     "addParent": "Add Parent",
@@ -811,7 +819,11 @@
     "noRecords": "No parents found",
     "failedToCreate": "Failed to create parent",
     "failedToUpdate": "Failed to update parent",
-    "failedToDelete": "Failed to delete parent"
+    "failedToDelete": "Failed to delete parent",
+    "selectChildren": "Select Children",
+    "childrenSelected": "children selected",
+    "noChildrenSelected": "No children selected",
+    "cannotDeleteWithChildren": "Cannot delete parent with associated children. Please unassign children first."
   },
   "reports": {
     "title": "Reports & Analytics",

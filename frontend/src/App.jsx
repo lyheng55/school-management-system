@@ -5,6 +5,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { useTranslation } from 'react-i18next';
 import { AuthProvider } from './context/AuthContext';
+import { ThemeProvider as CustomThemeProvider, useTheme } from './context/ThemeContext';
 import { createAppTheme } from './theme/theme';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -58,22 +59,44 @@ const queryClient = new QueryClient({
 // Component to handle theme and language updates
 const AppContent = () => {
   const { i18n } = useTranslation();
+  const { mode } = useTheme();
+  
+  // Safely get initial language
+  const getInitialLang = () => {
+    try {
+      return i18n.language || 
+             (typeof Storage !== 'undefined' && localStorage ? localStorage.getItem('i18nextLng') : null) || 
+             'en';
+    } catch (e) {
+      return 'en';
+    }
+  };
+
   const [theme, setTheme] = useState(() => {
-    const lang = i18n.language || localStorage.getItem('i18nextLng') || 'en';
-    return createAppTheme(lang);
+    const lang = getInitialLang();
+    return createAppTheme(lang, mode);
   });
 
   useEffect(() => {
-    // Update theme when language changes
+    // Update theme when language or mode changes
     const lang = i18n.language || 'en';
-    const newTheme = createAppTheme(lang);
+    const newTheme = createAppTheme(lang, mode);
     setTheme(newTheme);
 
-    // Update HTML lang attribute
-    document.documentElement.lang = lang;
-    document.body.lang = lang;
-    document.body.setAttribute('lang', lang);
-  }, [i18n.language]);
+    // Update HTML lang attribute for accessibility and SEO
+    try {
+      if (document && document.documentElement) {
+        document.documentElement.setAttribute('lang', lang);
+        document.documentElement.lang = lang;
+      }
+      if (document && document.body) {
+        document.body.setAttribute('lang', lang);
+        document.body.lang = lang;
+      }
+    } catch (e) {
+      console.warn('Could not update HTML lang attribute:', e);
+    }
+  }, [i18n.language, mode]);
 
   return (
     <ThemeProvider theme={theme}>
@@ -398,7 +421,9 @@ const AppContent = () => {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AppContent />
+      <CustomThemeProvider>
+        <AppContent />
+      </CustomThemeProvider>
     </QueryClientProvider>
   );
 }

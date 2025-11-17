@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -18,6 +18,8 @@ import {
   MenuItem,
   FormControl,
   Select,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import LanguageIcon from '@mui/icons-material/Language';
@@ -46,7 +48,10 @@ import InventoryIcon from '@mui/icons-material/Inventory';
 import BuildIcon from '@mui/icons-material/Build';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import FamilyRestroomIcon from '@mui/icons-material/FamilyRestroom';
+import LightModeIcon from '@mui/icons-material/LightMode';
+import DarkModeIcon from '@mui/icons-material/DarkMode';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 const drawerWidth = 240;
 
@@ -54,9 +59,44 @@ const Layout = ({ children }) => {
   const { t, i18n } = useTranslation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [languageAnchor, setLanguageAnchor] = useState(null);
+  const [permissionError, setPermissionError] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
   const { logout, user } = useAuth();
+  const { mode, toggleTheme } = useTheme();
+
+  // Check for permission errors from sessionStorage
+  useEffect(() => {
+    const checkPermissionError = () => {
+      try {
+        const storedError = sessionStorage.getItem('permissionError');
+        if (storedError) {
+          const error = JSON.parse(storedError);
+          // Only show if error is recent (within last 5 minutes)
+          if (Date.now() - error.timestamp < 300000) {
+            setPermissionError(error.message);
+            sessionStorage.removeItem('permissionError');
+          } else {
+            sessionStorage.removeItem('permissionError');
+          }
+        }
+      } catch (e) {
+        // Ignore parsing errors
+      }
+    };
+
+    checkPermissionError();
+    
+    // Listen for storage events (in case error is set from another tab)
+    const handleStorageChange = (e) => {
+      if (e.key === 'permissionError') {
+        checkPermissionError();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   // Menu items based on user role
   const getMenuItems = () => {
@@ -172,10 +212,21 @@ const Layout = ({ children }) => {
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             {menuItems.find((item) => item.path === location.pathname)?.text || t('nav.dashboard')}
           </Typography>
+          <IconButton
+            color="inherit"
+            onClick={toggleTheme}
+            aria-label={mode === 'dark' ? t('theme.switchToLight') : t('theme.switchToDark')}
+            sx={{ mr: 2 }}
+          >
+            {mode === 'dark' ? <LightModeIcon /> : <DarkModeIcon />}
+          </IconButton>
           <FormControl size="small" sx={{ minWidth: 120, mr: 2 }}>
             <Select
               value={i18n.language || 'en'}
-              onChange={(e) => i18n.changeLanguage(e.target.value)}
+              onChange={(e) => {
+                const newLang = e.target.value;
+                i18n.changeLanguage(newLang);
+              }}
               sx={{ color: 'inherit', '& .MuiSelect-icon': { color: 'inherit' } }}
             >
               <MenuItem value="en">{t('language.english')}</MenuItem>
@@ -233,6 +284,23 @@ const Layout = ({ children }) => {
         <Toolbar />
         {children}
       </Box>
+      
+      {/* Permission Error Snackbar */}
+      <Snackbar
+        open={!!permissionError}
+        autoHideDuration={6000}
+        onClose={() => setPermissionError(null)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setPermissionError(null)}
+          severity="error"
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {permissionError || t('common.accessDenied')}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

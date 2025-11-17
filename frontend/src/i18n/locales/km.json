@@ -50,6 +50,7 @@
     "success": "ជោគជ័យ",
     "error": "កំហុស",
     "failed": "បរាជ័យ",
+    "accessDenied": "បានបដិសេធ។ សិទ្ធិមិនគ្រប់គ្រាន់",
     "required": "ត្រូវការ",
     "optional": "ជម្រើស",
     "total": "សរុប",
@@ -80,6 +81,7 @@
     "dashboard": "ផ្ទាំងគ្រប់គ្រង",
     "students": "សិស្ស",
     "teachers": "គ្រូ",
+    "parents": "ឪពុកម្តាយ",
     "classes": "ថ្នាក់",
     "subjects": "មុខវិជ្ជា",
     "timetables": "កាលវិភាគ",
@@ -814,6 +816,12 @@
     "english": "English",
     "khmer": "ភាសាខ្មែរ"
   },
+  "theme": {
+    "switchToLight": "ប្តូរទៅរបៀបពន្លឺ",
+    "switchToDark": "ប្តូរទៅរបៀបងងឹត",
+    "light": "ពន្លឺ",
+    "dark": "ងងឹត"
+  },
   "parents": {
     "title": "ឪពុកម្តាយ",
     "addParent": "បន្ថែមឪពុកម្តាយ",
@@ -828,7 +836,11 @@
     "noRecords": "មិនឃើញឪពុកម្តាយ",
     "failedToCreate": "មិនអាចបង្កើតឪពុកម្តាយ",
     "failedToUpdate": "មិនអាចធ្វើបច្ចុប្បន្នភាពឪពុកម្តាយ",
-    "failedToDelete": "មិនអាចលុបឪពុកម្តាយ"
+    "failedToDelete": "មិនអាចលុបឪពុកម្តាយ",
+    "selectChildren": "ជ្រើសរើសកូន",
+    "childrenSelected": "កូនត្រូវបានជ្រើសរើស",
+    "noChildrenSelected": "មិនមានកូនត្រូវបានជ្រើសរើស",
+    "cannotDeleteWithChildren": "មិនអាចលុបឪពុកម្តាយដែលមានកូនភ្ជាប់។ សូមដកកូនចេញមុន។"
   },
   "reports": {
     "title": "របាយការណ៍ និងការវិភាគ",

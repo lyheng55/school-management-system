@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useTranslation } from 'react-i18next';
+import { useTheme } from '@mui/material/styles';
 import {
   Box,
   Button,
@@ -49,6 +50,8 @@ const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'sat
 
 const Timetables = () => {
   const { t } = useTranslation();
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
   
   const dayLabels = {
     monday: t('timetables.monday'),
@@ -454,7 +457,9 @@ const Timetables = () => {
           sx={{ 
             p: 6, 
             textAlign: 'center',
-            background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+            background: isDark 
+              ? 'linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%)'
+              : 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
             borderRadius: 3
           }}
         >
@@ -538,7 +543,7 @@ const Timetables = () => {
             sx={{ 
               p: 2, 
               mb: 3,
-              backgroundColor: 'grey.50',
+              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'grey.50',
               borderRadius: 2,
               border: '1px solid',
               borderColor: 'divider'
@@ -628,7 +633,9 @@ const Timetables = () => {
                           elevation={0}
                           sx={{
                             p: 2.5,
-                            backgroundColor: index % 2 === 0 ? 'grey.50' : 'background.paper',
+                            backgroundColor: index % 2 === 0 
+                              ? (isDark ? 'rgba(255, 255, 255, 0.03)' : 'grey.50')
+                              : 'background.paper',
                             borderRadius: 2,
                             border: '1px solid',
                             borderColor: 'divider',
@@ -761,7 +768,7 @@ const Timetables = () => {
                 <TableContainer>
                   <Table>
                     <TableHead>
-                      <TableRow sx={{ backgroundColor: 'grey.100' }}>
+                      <TableRow sx={{ backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'grey.100' }}>
                         <TableCell sx={{ fontWeight: 600, py: 2 }}>
                           <Box display="flex" alignItems="center" gap={1}>
                             <AccessTimeIcon fontSize="small" color="primary" />
@@ -811,7 +818,9 @@ const Timetables = () => {
                           <TableRow 
                             key={timetable.id}
                             sx={{
-                              backgroundColor: index % 2 === 0 ? 'background.paper' : 'grey.50',
+                              backgroundColor: index % 2 === 0 
+                                ? 'background.paper' 
+                                : (isDark ? 'rgba(255, 255, 255, 0.03)' : 'grey.50'),
                               '&:hover': {
                                 backgroundColor: 'action.hover'
                               },

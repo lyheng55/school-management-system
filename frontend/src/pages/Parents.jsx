@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useTranslation } from 'react-i18next';
 import {
@@ -28,6 +28,9 @@ import {
   Pagination,
   Stack,
   Chip,
+  Checkbox,
+  ListItemText,
+  OutlinedInput,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import AddIcon from '@mui/icons-material/Add';
@@ -36,12 +39,15 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import FamilyRestroomIcon from '@mui/icons-material/FamilyRestroom';
 import Layout from '../components/Layout';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 const Parents = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filterRelationship, setFilterRelationship] = useState('');
   const [open, setOpen] = useState(false);
   const [selectedParent, setSelectedParent] = useState(null);
@@ -52,28 +58,87 @@ const Parents = () => {
     occupation: '',
     address: '',
     relationship: '',
+    student_ids: [],
   });
   const [error, setError] = useState('');
   const queryClient = useQueryClient();
 
-  const { data, isLoading, error: queryError } = useQuery(
-    ['parents', page, search, filterRelationship],
+  // Fetch all students for selection
+  const { data: allStudents } = useQuery(
+    'allStudents',
     async () => {
-      const params = { page, limit: 10 };
-      if (search) params.search = search;
-      if (filterRelationship) params.relationship = filterRelationship;
-      const response = await api.get('/parents', { params });
-      return response.data.data;
+      const response = await api.get('/students', { params: { limit: 1000 } });
+      return response.data.data?.students || [];
+    }
+  );
+
+  // Debounce search input to avoid too many API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1); // Reset to first page when search changes
+    }, 500); // 500ms delay
+
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const { data, isLoading, error: queryError } = useQuery(
+    ['parents', page, debouncedSearch, filterRelationship],
+    async () => {
+      try {
+        const params = { page, limit: 10 }; // Show 10 parents per page
+        if (debouncedSearch) params.search = debouncedSearch;
+        if (filterRelationship) params.relationship = filterRelationship;
+        const response = await api.get('/parents', { params });
+        
+        // Log response for debugging
+        console.log('Parents API Response:', response.data);
+        
+        // Ensure we return the correct structure
+        if (response.data && response.data.data) {
+          return response.data.data;
+        }
+        
+        // Fallback if structure is different
+        return {
+          parents: response.data?.parents || [],
+          pagination: response.data?.pagination || { total: 0, page: 1, limit: 10, pages: 0 }
+        };
+      } catch (error) {
+        console.error('Error in parents query:', error);
+        throw error;
+      }
     },
     {
+      staleTime: 30000, // Consider data fresh for 30 seconds
+      cacheTime: 300000, // Keep in cache for 5 minutes
+      retry: (failureCount, error) => {
+        // Don't retry on 429 errors immediately
+        if (error?.response?.status === 429) {
+          return false;
+        }
+        // Don't retry on 403 or 401 errors
+        if (error?.response?.status === 403 || error?.response?.status === 401) {
+          return false;
+        }
+        return failureCount < 2;
+      },
+      retryDelay: (attemptIndex) => {
+        // Exponential backoff: 1s, 2s, 4s
+        return Math.min(1000 * 2 ** attemptIndex, 4000);
+      },
       onError: (err) => {
         console.error('Error fetching parents:', err);
-        if (err.response?.status === 404) {
+        if (err.response?.status === 429) {
+          setError('Too many requests. Please wait a moment and try again.');
+        } else if (err.response?.status === 404) {
           setError('Parents endpoint not found. Please check backend server.');
         } else if (err.response?.status === 403) {
-          setError('You do not have permission to access this page.');
+          setError('You do not have permission to access this page. Please ensure you are logged in as an admin or teacher.');
         } else if (err.response?.status === 401) {
           setError('Please login to access this page.');
+        } else {
+          setError(err.response?.data?.message || 'Error loading parents. Please check your connection and try again.');
         }
       }
     }
@@ -86,7 +151,8 @@ const Parents = () => {
     },
     {
       onSuccess: () => {
-        queryClient.invalidateQueries('parents');
+        queryClient.invalidateQueries(['parents']);
+        queryClient.invalidateQueries('allStudents');
         handleClose();
         setPage(1);
       },
@@ -103,7 +169,8 @@ const Parents = () => {
     },
     {
       onSuccess: () => {
-        queryClient.invalidateQueries('parents');
+        queryClient.invalidateQueries(['parents']);
+        queryClient.invalidateQueries('allStudents');
         handleClose();
       },
       onError: (err) => {
@@ -119,13 +186,15 @@ const Parents = () => {
     },
     {
       onSuccess: () => {
-        queryClient.invalidateQueries('parents');
+        queryClient.invalidateQueries(['parents']);
         if (data?.parents?.length === 1 && page > 1) {
           setPage(page - 1);
         }
       },
       onError: (err) => {
-        setError(err.response?.data?.message || t('parents.failedToDelete'));
+        const errorMessage = err.response?.data?.message || t('parents.failedToDelete');
+        setError(errorMessage);
+        console.error('Delete parent error:', err);
       },
     }
   );
@@ -141,6 +210,7 @@ const Parents = () => {
         occupation: parent.occupation || '',
         address: parent.address || '',
         relationship: parent.relationship || '',
+        student_ids: parent.children?.map(child => child.id) || [],
       });
     } else {
       setFormData({
@@ -150,6 +220,7 @@ const Parents = () => {
         occupation: '',
         address: '',
         relationship: '',
+        student_ids: [],
       });
     }
     setOpen(true);
@@ -166,6 +237,7 @@ const Parents = () => {
       occupation: '',
       address: '',
       relationship: '',
+      student_ids: [],
     });
   };
 
@@ -176,10 +248,21 @@ const Parents = () => {
       return;
     }
 
-    if (selectedParent) {
-      updateMutation.mutate({ id: selectedParent.id, data: formData });
-    } else {
-      createMutation.mutate(formData);
+    try {
+      // Prepare data - ensure student_ids is an array
+      const submitData = {
+        ...formData,
+        student_ids: Array.isArray(formData.student_ids) ? formData.student_ids : []
+      };
+
+      if (selectedParent) {
+        updateMutation.mutate({ id: selectedParent.id, data: submitData });
+      } else {
+        createMutation.mutate(submitData);
+      }
+    } catch (err) {
+      console.error('Error submitting form:', err);
+      setError(err.message || t('parents.failedToCreate'));
     }
   };
 
@@ -220,11 +303,9 @@ const Parents = () => {
                 fullWidth
                 label={t('common.search')}
                 value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
-                }}
+                onChange={(e) => setSearch(e.target.value)}
                 placeholder={t('parents.searchPlaceholder')}
+                helperText={search !== debouncedSearch ? 'Typing...' : ''}
               />
             </Grid>
             <Grid item xs={12} md={6}>
@@ -249,9 +330,14 @@ const Parents = () => {
           </Grid>
         </Paper>
 
-        {queryError && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {queryError.response?.data?.message || queryError.message || 'Error loading parents. Please check your connection and try again.'}
+        {(queryError || error) && (
+          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
+            {error || queryError?.response?.data?.message || queryError?.message || 'Error loading parents. Please check your connection and try again.'}
+            {queryError?.response?.status === 403 && (
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                Current user role: {user?.role || 'Unknown'}. This page requires admin or teacher role.
+              </Typography>
+            )}
           </Alert>
         )}
         {isLoading ? (
@@ -260,6 +346,14 @@ const Parents = () => {
           </Box>
         ) : (
           <>
+            {/* Debug info - remove in production */}
+            {process.env.NODE_ENV === 'development' && (
+              <Box sx={{ mb: 2, p: 1, bgcolor: 'grey.100', borderRadius: 1 }}>
+                <Typography variant="caption">
+                  Debug: Data received - Parents: {data?.parents?.length || 0}, Total: {data?.pagination?.total || 0}
+                </Typography>
+              </Box>
+            )}
             <TableContainer component={Paper}>
               <Table>
                 <TableHead>
@@ -274,7 +368,7 @@ const Parents = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {data?.parents?.length > 0 ? (
+                  {data?.parents && data.parents.length > 0 ? (
                     data.parents.map((parent) => (
                       <TableRow key={parent.id}>
                         <TableCell>
@@ -295,9 +389,9 @@ const Parents = () => {
                         </TableCell>
                         <TableCell>{parent.occupation || '-'}</TableCell>
                         <TableCell>
-                          {parent.students?.length > 0 ? (
+                          {parent.children && Array.isArray(parent.children) && parent.children.length > 0 ? (
                             <Typography variant="body2">
-                              {parent.students.length} {t('parents.child')}
+                              {parent.children.length} {t('parents.child')}
                             </Typography>
                           ) : (
                             <Typography variant="body2" color="text.secondary">
@@ -318,7 +412,7 @@ const Parents = () => {
                             size="small"
                             onClick={() => handleDelete(parent.id)}
                             color="error"
-                            disabled={parent.students?.length > 0}
+                            title={t('common.delete')}
                           >
                             <DeleteIcon />
                           </IconButton>
@@ -338,16 +432,18 @@ const Parents = () => {
               </Table>
             </TableContainer>
 
-            {data?.pagination?.pages > 1 && (
+            {data?.pagination && (
               <Stack spacing={2} alignItems="center" mt={3}>
                 <Pagination
                   count={data.pagination.pages}
                   page={page}
                   onChange={(e, value) => setPage(value)}
                   color="primary"
+                  showFirstButton
+                  showLastButton
                 />
                 <Typography variant="body2" color="text.secondary">
-                  {t('common.showing')} {(page - 1) * data.pagination.limit + 1} - {Math.min(page * data.pagination.limit, data.pagination.total)} {t('common.of')} {data.pagination.total} {t('common.entries')}
+                  Showing {(page - 1) * data.pagination.limit + 1} - {Math.min(page * data.pagination.limit, data.pagination.total)} of {data.pagination.total} entries
                 </Typography>
               </Stack>
             )}
@@ -436,6 +532,33 @@ const Parents = () => {
                   multiline
                   rows={3}
                 />
+              </Grid>
+              <Grid item xs={12}>
+                <FormControl fullWidth>
+                  <InputLabel>{t('parents.selectChildren')}</InputLabel>
+                  <Select
+                    multiple
+                    value={formData.student_ids}
+                    onChange={(e) =>
+                      setFormData({ ...formData, student_ids: e.target.value })
+                    }
+                    input={<OutlinedInput label={t('parents.selectChildren')} />}
+                    renderValue={(selected) => {
+                      if (selected.length === 0) return t('parents.noChildrenSelected');
+                      return `${selected.length} ${t('parents.childrenSelected')}`;
+                    }}
+                  >
+                    {allStudents?.map((student) => (
+                      <MenuItem key={student.id} value={student.id}>
+                        <Checkbox checked={formData.student_ids.indexOf(student.id) > -1} />
+                        <ListItemText
+                          primary={`${student.first_name} ${student.last_name}`}
+                          secondary={student.class ? `${student.class.name} - ${student.student_id}` : student.student_id}
+                        />
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
               </Grid>
             </Grid>
           </DialogContent>
