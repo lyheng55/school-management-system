@@ -41,6 +41,7 @@ module.exports = {
       academic_year: {
         type: Sequelize.STRING(20),
         allowNull: false,
+        defaultValue: '2024-2025',
         comment: 'Academic year (e.g., 2024-2025)'
       },
       status: {

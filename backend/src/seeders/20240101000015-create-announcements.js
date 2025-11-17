@@ -37,6 +37,11 @@ module.exports = {
       'This is an important notice regarding school policies and procedures.'
     ];
 
+    // Helper function to format date for MySQL DATETIME
+    const formatMySQLDateTime = (date) => {
+      return date.toISOString().replace('T', ' ').split('.')[0];
+    };
+
     // Create announcements
     for (let i = 0; i < 10; i++) {
       const announcementDate = new Date();
@@ -50,12 +55,12 @@ module.exports = {
         content: contents[i],
         target_audience: audiences[i % audiences.length],
         priority: priorities[i % priorities.length],
-        published_at: announcementDate.toISOString(),
-        expires_at: expiryDate.toISOString(),
+        published_at: formatMySQLDateTime(announcementDate),
+        expires_at: formatMySQLDateTime(expiryDate),
         is_active: true,
         created_by: admin[0]?.id || 1,
-        created_at: now,
-        updated_at: now
+        created_at: formatMySQLDateTime(now),
+        updated_at: formatMySQLDateTime(now)
       });
     }
 

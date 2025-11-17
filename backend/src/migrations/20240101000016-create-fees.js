@@ -30,7 +30,8 @@ module.exports = {
       },
       academic_year: {
         type: Sequelize.STRING(20),
-        allowNull: false
+        allowNull: false,
+        defaultValue: '2024-2025'
       },
       term: {
         type: Sequelize.ENUM('first', 'second', 'third', 'annual'),

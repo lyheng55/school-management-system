@@ -42,7 +42,12 @@ const authorize = (...roles) => {
       });
     }
 
-    if (!roles.includes(req.user.role)) {
+    // Handle both array and spread arguments
+    // If roles[0] is an array, use it; otherwise flatten all roles
+    const allowedRoles = Array.isArray(roles[0]) ? roles[0] : roles.flat();
+    
+    if (!allowedRoles.includes(req.user.role)) {
+      console.log(`Authorization failed: User role "${req.user.role}" not in allowed roles:`, allowedRoles);
       return res.status(403).json({
         success: false,
         message: 'Access denied. Insufficient permissions'

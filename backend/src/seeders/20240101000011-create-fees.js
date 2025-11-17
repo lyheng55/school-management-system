@@ -9,14 +9,16 @@ module.exports = {
     );
 
     const now = new Date();
+    const currentYear = new Date().getFullYear();
+    const academicYear = `${currentYear}-${currentYear + 1}`;
     const fees = [];
-    const feeTypes = ['tuition', 'registration', 'library', 'sports', 'lab'];
+    const feeTypes = ['tuition', 'library', 'sports', 'lab', 'transport'];
     const feeAmounts = {
       'tuition': 500.00,
-      'registration': 100.00,
       'library': 50.00,
       'sports': 75.00,
-      'lab': 100.00
+      'lab': 100.00,
+      'transport': 150.00
     };
  
     // Create fees for each student
@@ -38,6 +40,7 @@ module.exports = {
           fee_type: feeType,
           amount: feeAmounts[feeType],
           due_date: dueDate.toISOString().split('T')[0],
+          academic_year: academicYear,
           description: `${feeType.charAt(0).toUpperCase() + feeType.slice(1)} fee for student`,
           status: status,
           created_at: now,

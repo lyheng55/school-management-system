@@ -1,5 +1,6 @@
 const { Parent, Student, Grade, Attendance, Fee, Payment, Timetable, Exam, Class, Subject, User, Teacher } = require('../models');
 const { Op } = require('sequelize');
+const sequelize = require('../config/database');
 const Joi = require('joi');
 
 const parentSchema = Joi.object({
@@ -9,7 +10,8 @@ const parentSchema = Joi.object({
   phone: Joi.string().required(),
   occupation: Joi.string().optional().allow('', null),
   address: Joi.string().optional().allow('', null),
-  relationship: Joi.string().valid('father', 'mother', 'guardian', 'other').required()
+  relationship: Joi.string().valid('father', 'mother', 'guardian', 'other').required(),
+  student_ids: Joi.array().items(Joi.number().integer()).optional()
 });
 
 // Get parent's children
@@ -517,22 +519,32 @@ exports.getAllParents = async (req, res) => {
     }
     if (relationship) where.relationship = relationship;
 
-    const { count, rows } = await Parent.findAndCountAll({
+    const parents = await Parent.findAll({
       where,
       include: [
-        { model: User, as: 'user', attributes: ['id', 'username', 'email', 'role'] },
+        { model: User, as: 'user', attributes: ['id', 'username', 'email', 'role'], required: false },
         { 
           model: Student, 
-          as: 'students',
+          as: 'children',
           attributes: ['id', 'first_name', 'last_name', 'student_id'],
-          include: [{ model: Class, as: 'class', attributes: ['id', 'name'] }]
+          required: false,
+          include: [{ model: Class, as: 'class', attributes: ['id', 'name'], required: false }]
         }
       ],
       limit: parseInt(limit),
       offset: parseInt(offset),
       order: [['created_at', 'DESC']],
-      distinct: true
+      subQuery: false
     });
+
+    const totalCount = await Parent.count({
+      where,
+      distinct: true,
+      col: 'id'
+    });
+
+    const rows = parents;
+    const count = totalCount;
 
     res.json({
       success: true,
@@ -563,7 +575,7 @@ exports.getParentById = async (req, res) => {
         { model: User, as: 'user', attributes: ['id', 'username', 'email', 'role', 'telegram_chat_id'] },
         { 
           model: Student, 
-          as: 'students',
+          as: 'children',
           attributes: ['id', 'first_name', 'last_name', 'student_id'],
           include: [{ model: Class, as: 'class', attributes: ['id', 'name'] }]
         }
@@ -651,23 +663,36 @@ exports.createParent = async (req, res) => {
       }
     }
 
+    // Extract student_ids before creating parent (Sequelize will ignore it)
+    const { student_ids, ...parentData } = value;
+
     // Create parent record
     const parent = await Parent.create({
-      ...value,
+      ...parentData,
       user_id: userId
     });
+
+    // Assign students to parent if student_ids provided
+    if (student_ids && Array.isArray(student_ids) && student_ids.length > 0) {
+      await Student.update(
+        { parent_id: parent.id },
+        { where: { id: student_ids } }
+      );
+    }
 
     const parentWithRelations = await Parent.findByPk(parent.id, {
       include: [
         { model: User, as: 'user', attributes: ['id', 'username', 'email', 'role'] },
-        { model: Student, as: 'students' }
+        { model: Student, as: 'children' }
       ]
     });
 
     res.status(201).json({
       success: true,
       message: 'Parent created successfully',
-      data: parentWithRelations
+      data: {
+        parent: parentWithRelations
+      }
     });
   } catch (error) {
     console.error('Create parent error:', error);
@@ -697,18 +722,41 @@ exports.updateParent = async (req, res) => {
       });
     }
 
-    await parent.update(value);
+    // Extract student_ids before updating parent
+    const { student_ids, ...parentData } = value;
+    
+    await parent.update(parentData);
+
+    // Update student assignments if student_ids provided
+    if (student_ids !== undefined) {
+      // Remove parent_id from students currently assigned to this parent
+      await Student.update(
+        { parent_id: null },
+        { where: { parent_id: parent.id } }
+      );
+
+      // Assign new students to this parent
+      if (Array.isArray(student_ids) && student_ids.length > 0) {
+        await Student.update(
+          { parent_id: parent.id },
+          { where: { id: student_ids } }
+        );
+      }
+    }
+
     const updatedParent = await Parent.findByPk(parent.id, {
       include: [
         { model: User, as: 'user', attributes: ['id', 'username', 'email', 'role'] },
-        { model: Student, as: 'students' }
+        { model: Student, as: 'children' }
       ]
     });
 
     res.json({
       success: true,
       message: 'Parent updated successfully',
-      data: updatedParent
+      data: {
+        parent: updatedParent
+      }
     });
   } catch (error) {
     console.error('Update parent error:', error);
@@ -721,31 +769,34 @@ exports.updateParent = async (req, res) => {
 };
 
 exports.deleteParent = async (req, res) => {
+  const transaction = await sequelize.transaction();
   try {
-    const parent = await Parent.findByPk(req.params.id);
+    const parent = await Parent.findByPk(req.params.id, { transaction });
     if (!parent) {
+      await transaction.rollback();
       return res.status(404).json({
         success: false,
         message: 'Parent not found'
       });
     }
 
-    // Check if parent has students
-    const students = await Student.findAll({ where: { parent_id: parent.id } });
-    if (students.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Cannot delete parent with associated students. Please reassign students first.'
-      });
-    }
+    // Unassign all students from this parent before deleting
+    await Student.update(
+      { parent_id: null },
+      { where: { parent_id: parent.id }, transaction }
+    );
 
-    await parent.destroy();
+    // Delete the parent record
+    await parent.destroy({ transaction });
+
+    await transaction.commit();
 
     res.json({
       success: true,
       message: 'Parent deleted successfully'
     });
   } catch (error) {
+    await transaction.rollback();
     console.error('Delete parent error:', error);
     res.status(500).json({
       success: false,

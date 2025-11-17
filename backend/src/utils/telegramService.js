@@ -8,10 +8,21 @@ let bot = null;
  * Initialize Telegram Bot
  */
 const initializeBot = () => {
+  const telegramEnabled = process.env.TELEGRAM_ENABLED === 'true';
   const token = process.env.TELEGRAM_BOT_TOKEN;
   
+  // Only check for token if Telegram is explicitly enabled
+  if (telegramEnabled && !token) {
+    console.warn('⚠️  Telegram Bot Token not configured. Set TELEGRAM_BOT_TOKEN in .env to enable Telegram notifications.');
+    return null;
+  }
+  
+  // If Telegram is not enabled, silently skip initialization
+  if (!telegramEnabled) {
+    return null;
+  }
+  
   if (!token) {
-    console.warn('⚠️  Telegram Bot Token not configured. Telegram notifications disabled.');
     return null;
   }
 
@@ -46,8 +57,13 @@ const reinitializeBot = () => {
  * @returns {Promise<object>} Telegram API response
  */
 const sendMessage = async (chatId, message, options = {}) => {
+  const telegramEnabled = process.env.TELEGRAM_ENABLED === 'true';
+  
   if (!bot) {
-    console.warn('Telegram bot not initialized. Message not sent:', message.substring(0, 50));
+    // Only warn if Telegram is explicitly enabled but bot is not initialized
+    if (telegramEnabled) {
+      console.warn('Telegram bot not initialized. Message not sent:', message.substring(0, 50));
+    }
     return null;
   }
 
