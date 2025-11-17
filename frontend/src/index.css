@@ -1,0 +1,72 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Khmer Font Support */
+body[lang="km"],
+body[lang="km"] *,
+html[lang="km"] body,
+html[lang="km"] body * {
+  font-family: 'Noto Sans Khmer', 'Khmer Sangam MN', 'Khmer OS', 'Leelawadee UI', 
+    'Leelawadee', 'Khmer', 'Moul', sans-serif !important;
+  font-feature-settings: "kern" 1, "liga" 1;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-variant-ligatures: common-ligatures;
+  font-kerning: normal;
+}
+
+/* Ensure proper rendering for Khmer text */
+.khmer-text,
+[lang="km"],
+[lang="km"] * {
+  font-family: 'Noto Sans Khmer', 'Khmer Sangam MN', 'Khmer OS', 'Leelawadee UI', 
+    'Leelawadee', 'Khmer', 'Moul', sans-serif !important;
+  font-feature-settings: "kern" 1, "liga" 1;
+  text-rendering: optimizeLegibility;
+  line-height: 1.7;
+  letter-spacing: 0.01em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Optimize Khmer font loading */
+@font-face {
+  font-family: 'Noto Sans Khmer';
+  font-display: swap;
+}
+
+/* Better spacing for Khmer typography */
+html[lang="km"] h1,
+html[lang="km"] h2,
+html[lang="km"] h3,
+html[lang="km"] h4,
+html[lang="km"] h5,
+html[lang="km"] h6 {
+  line-height: 1.5;
+  letter-spacing: 0.01em;
+}
+
+html[lang="km"] p,
+html[lang="km"] span,
+html[lang="km"] div {
+  line-height: 1.7;
+  letter-spacing: 0.01em;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
