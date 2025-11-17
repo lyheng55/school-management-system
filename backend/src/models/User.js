@@ -41,6 +41,12 @@ const User = sequelize.define('User', {
   refresh_token: {
     type: DataTypes.TEXT,
     allowNull: true
+  },
+  telegram_chat_id: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+    unique: true,
+    comment: 'Telegram chat ID for notifications'
   }
 }, {
   tableName: 'users',

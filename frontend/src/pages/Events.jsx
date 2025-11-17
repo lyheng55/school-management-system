@@ -26,6 +26,8 @@ import {
   Divider,
   Tabs,
   Tab,
+  Pagination,
+  Stack,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -461,6 +463,22 @@ const Events = () => {
                 </Grid>
               </Paper>
             ))}
+          </Box>
+        )}
+
+        {/* Pagination Controls */}
+        {data?.pagination && data.pagination.pages > 1 && (
+          <Box display="flex" justifyContent="center" mt={3}>
+            <Stack spacing={2}>
+              <Pagination
+                count={data.pagination.pages}
+                page={page}
+                onChange={(event, value) => setPage(value)}
+                color="primary"
+                showFirstButton
+                showLastButton
+              />
+            </Stack>
           </Box>
         )}
 

@@ -19,6 +19,7 @@ import {
   Tab,
   Divider,
   Alert,
+  Menu,
 } from '@mui/material';
 import {
   BarChart,
@@ -37,6 +38,8 @@ import {
 } from 'recharts';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import DownloadIcon from '@mui/icons-material/Download';
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+import TableChartIcon from '@mui/icons-material/TableChart';
 import Layout from '../components/Layout';
 import api from '../services/api';
 
@@ -51,6 +54,8 @@ const Reports = () => {
   const [studentId, setStudentId] = useState('');
   const [subjectId, setSubjectId] = useState('');
   const [tabValue, setTabValue] = useState(0);
+  const [exportAnchor, setExportAnchor] = useState(null);
+  const [exporting, setExporting] = useState(false);
 
   // Get classes for filter
   const { data: classes } = useQuery('classes', async () => {
@@ -134,9 +139,150 @@ const Reports = () => {
 
   const isLoading = studentLoading || staffLoading || financeLoading || attendanceLoading;
 
-  const handleExport = () => {
-    // TODO: Implement PDF/Excel export
-    alert(t('reports.exportComingSoon'));
+  const handleExportClick = (event) => {
+    setExportAnchor(event.currentTarget);
+  };
+
+  const handleExportClose = () => {
+    setExportAnchor(null);
+  };
+
+  const handleExport = async (format) => {
+    try {
+      setExporting(true);
+      handleExportClose();
+
+      // Build query parameters
+      const params = new URLSearchParams();
+      if (startDate) params.append('start_date', startDate);
+      if (endDate) params.append('end_date', endDate);
+      if (classId) params.append('class_id', classId);
+      if (studentId) params.append('student_id', studentId);
+      if (subjectId) params.append('subject_id', subjectId);
+
+      const url = `/analytics/export/${format}/${reportType}?${params.toString()}`;
+      
+      let response;
+      try {
+        response = await api.get(url, {
+          responseType: 'blob',
+          validateStatus: function (status) {
+            // Don't throw error for any status, we'll handle it manually
+            return status >= 200 && status < 300;
+          }
+        });
+      } catch (error) {
+        // Network or other errors
+        console.error('Export network error:', error);
+        alert('Error exporting report. Please check your connection and try again.');
+        return;
+      }
+
+      // Check response status - if not 2xx, it's an error
+      if (response.status < 200 || response.status >= 300) {
+        // Try to read error message from blob
+        const clonedBlob = response.data.slice();
+        const text = await clonedBlob.text();
+        let errorMessage = `Export failed with status ${response.status}. Please try again.`;
+        try {
+          const errorData = JSON.parse(text);
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch (e) {
+          // If parsing fails, use default message
+        }
+        alert(errorMessage);
+        return;
+      }
+
+      // Check if response is actually an error (JSON error response might be returned as blob)
+      const contentType = response.headers['content-type'] || response.headers['Content-Type'] || '';
+      
+      // If content type is JSON, it's likely an error - need to clone blob before reading
+      if (contentType.includes('application/json')) {
+        const clonedBlob = response.data.slice();
+        const text = await clonedBlob.text();
+        let errorMessage = 'Error exporting report. Please try again.';
+        try {
+          const errorData = JSON.parse(text);
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch (e) {
+          // If parsing fails, use default message
+        }
+        alert(errorMessage);
+        return;
+      }
+
+      // Verify we have actual file content
+      if (!response.data || response.data.size === 0) {
+        alert('Export failed: Empty file received. Please try again.');
+        return;
+      }
+
+      // Extract filename from Content-Disposition header if available
+      let filename = `${reportType}-report-${Date.now()}.${format === 'pdf' ? 'pdf' : 'xlsx'}`;
+      
+      // Try to get Content-Disposition header (case-insensitive)
+      const contentDisposition = response.headers['content-disposition'] || 
+                                  response.headers['Content-Disposition'] ||
+                                  (response.headers && Object.keys(response.headers).find(key => 
+                                    key.toLowerCase() === 'content-disposition'
+                                  ) && response.headers[Object.keys(response.headers).find(key => 
+                                    key.toLowerCase() === 'content-disposition'
+                                  )]);
+      
+      if (contentDisposition) {
+        // Try to extract filename from various formats
+        let filenameMatch = contentDisposition.match(/filename\*?=['"]?([^'";\n]+)['"]?/i);
+        if (!filenameMatch) {
+          filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/i);
+        }
+        
+        if (filenameMatch && filenameMatch[1]) {
+          filename = filenameMatch[1].replace(/['"]/g, '');
+          // Handle UTF-8 encoded filenames (RFC 5987)
+          if (filename.includes("UTF-8''") || filename.startsWith("UTF-8''")) {
+            filename = decodeURIComponent(filename.replace(/UTF-8''/i, ''));
+          } else if (filename.includes('%')) {
+            // Try to decode if it looks URL-encoded
+            try {
+              filename = decodeURIComponent(filename);
+            } catch (e) {
+              // Keep original if decoding fails
+            }
+          }
+        }
+      }
+
+      // Create blob and download
+      const blob = new Blob([response.data], {
+        type: format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      });
+      
+      // Verify blob was created successfully
+      if (!blob || blob.size === 0) {
+        alert('Export failed: Invalid file data. Please try again.');
+        return;
+      }
+
+      const url_blob = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url_blob;
+      link.download = filename;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      
+      // Clean up after a short delay to ensure download starts
+      setTimeout(() => {
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url_blob);
+      }, 100);
+    } catch (error) {
+      console.error('Export error:', error);
+      alert(t('reports.exportError') || 'Error exporting report. Please try again.');
+    } finally {
+      setExporting(false);
+    }
   };
 
   const renderStudentPerformance = () => {
@@ -507,14 +653,30 @@ const Reports = () => {
     <Layout>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4">{t('reports.title')}</Typography>
-        <Button
-          variant="contained"
-          startIcon={<DownloadIcon />}
-          onClick={handleExport}
-          disabled={isLoading}
-        >
-          {t('reports.export')}
-        </Button>
+        <Box>
+          <Button
+            variant="contained"
+            startIcon={<DownloadIcon />}
+            onClick={handleExportClick}
+            disabled={isLoading || exporting}
+          >
+            {exporting ? t('reports.exporting') || 'Exporting...' : t('reports.export')}
+          </Button>
+          <Menu
+            anchorEl={exportAnchor}
+            open={Boolean(exportAnchor)}
+            onClose={handleExportClose}
+          >
+            <MenuItem onClick={() => handleExport('pdf')}>
+              <PictureAsPdfIcon sx={{ mr: 1 }} />
+              {t('reports.exportPDF') || 'Export as PDF'}
+            </MenuItem>
+            <MenuItem onClick={() => handleExport('excel')}>
+              <TableChartIcon sx={{ mr: 1 }} />
+              {t('reports.exportExcel') || 'Export as Excel'}
+            </MenuItem>
+          </Menu>
+        </Box>
       </Box>
 
       {/* Filters */}

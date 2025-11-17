@@ -1,6 +1,7 @@
-const { Attendance, Student, User, Class } = require('../models');
+const { Attendance, Student, User, Class, Parent } = require('../models');
 const Joi = require('joi');
 const { Op } = require('sequelize');
+const telegramService = require('../utils/telegramService');
 
 const attendanceSchema = Joi.object({
   student_id: Joi.number().integer().required(),
@@ -35,10 +36,43 @@ exports.markAttendance = async (req, res) => {
 
     const attendanceWithRelations = await Attendance.findByPk(attendance.id, {
       include: [
-        { model: Student, as: 'student', include: [{ model: Class, as: 'class' }] },
+        { 
+          model: Student, 
+          as: 'student', 
+          include: [
+            { model: Class, as: 'class' },
+            { model: Parent, as: 'parent', include: [{ model: User, as: 'user' }] }
+          ]
+        },
         { model: User, as: 'markedBy', attributes: ['id', 'username', 'email'], required: false }
       ]
     });
+
+    // Send Telegram notification to parent if student is absent or late
+    if (attendanceWithRelations && (value.status === 'absent' || value.status === 'late')) {
+      try {
+        const student = attendanceWithRelations.student;
+        const parent = student?.parent;
+        const parentUser = parent?.user;
+        
+        // Check if parent has telegram_chat_id (we'll add this field later)
+        // For now, check if there's a telegram_chat_id in user model or use a config
+        const telegramChatId = parentUser?.telegram_chat_id || process.env[`TELEGRAM_CHAT_${parentUser?.id}`];
+        
+        if (telegramChatId && student) {
+          await telegramService.sendAttendanceAlert(telegramChatId, {
+            studentName: `${student.first_name} ${student.last_name}`,
+            className: student.class?.name || 'N/A',
+            date: new Date(value.date).toLocaleDateString(),
+            status: value.status,
+            remarks: value.remarks || null
+          });
+        }
+      } catch (telegramError) {
+        // Don't fail the request if Telegram notification fails
+        console.error('Telegram notification error:', telegramError.message);
+      }
+    }
 
     res.json({
       success: true,
@@ -93,6 +127,35 @@ exports.bulkMarkAttendance = async (req, res) => {
 
         if (!attendance.isNewRecord) {
           await attendance.update(value);
+        }
+
+        // Send Telegram notification if absent or late
+        if (value.status === 'absent' || value.status === 'late') {
+          try {
+            const studentRecord = await Student.findByPk(value.student_id, {
+              include: [
+                { model: Class, as: 'class' },
+                { model: Parent, as: 'parent', include: [{ model: User, as: 'user' }] }
+              ]
+            });
+
+            if (studentRecord?.parent?.user) {
+              const parentUser = studentRecord.parent.user;
+              const telegramChatId = parentUser.telegram_chat_id || process.env[`TELEGRAM_CHAT_${parentUser.id}`];
+              
+              if (telegramChatId) {
+                await telegramService.sendAttendanceAlert(telegramChatId, {
+                  studentName: `${studentRecord.first_name} ${studentRecord.last_name}`,
+                  className: studentRecord.class?.name || 'N/A',
+                  date: new Date(date).toLocaleDateString(),
+                  status: value.status,
+                  remarks: value.remarks || null
+                });
+              }
+            }
+          } catch (telegramError) {
+            console.error(`Telegram notification error for student ${att.student_id}:`, telegramError.message);
+          }
         }
 
         results.push({ student_id: att.student_id, success: true, attendance });

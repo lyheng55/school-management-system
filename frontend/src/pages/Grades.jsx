@@ -28,6 +28,8 @@ import {
   CircularProgress,
   Tabs,
   Tab,
+  Pagination,
+  Stack,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import AddIcon from '@mui/icons-material/Add';
@@ -40,6 +42,7 @@ import api from '../services/api';
 
 const Grades = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [open, setOpen] = useState(false);
   const [openBulk, setOpenBulk] = useState(false);
@@ -480,6 +483,22 @@ const Grades = () => {
           </TableBody>
         </Table>
       </TableContainer>
+
+      {/* Pagination Controls */}
+      {data?.pagination && data.pagination.pages > 1 && (
+        <Box display="flex" justifyContent="center" mt={3}>
+          <Stack spacing={2}>
+            <Pagination
+              count={data.pagination.pages}
+              page={page}
+              onChange={(event, value) => setPage(value)}
+              color="primary"
+              showFirstButton
+              showLastButton
+            />
+          </Stack>
+        </Box>
+      )}
 
       <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
         <DialogTitle>

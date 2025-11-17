@@ -4,12 +4,12 @@ module.exports = {
   up: async (queryInterface, Sequelize) => {
     await queryInterface.createTable('payments', {
       id: {
-        type: Sequelize.INTEGER,
+        type: Sequelize.INTEGER.UNSIGNED,
         primaryKey: true,
         autoIncrement: true
       },
       fee_id: {
-        type: Sequelize.INTEGER,
+        type: Sequelize.INTEGER.UNSIGNED,
         allowNull: false,
         references: {
           model: 'fees',
@@ -32,8 +32,7 @@ module.exports = {
       payment_date: {
         type: Sequelize.DATEONLY,
         allowNull: false,
-        defaultValue: Sequelize.literal('CURRENT_DATE')
-      },
+        },
       receipt_number: {
         type: Sequelize.STRING(50),
         allowNull: true,
@@ -44,7 +43,7 @@ module.exports = {
         allowNull: true
       },
       processed_by: {
-        type: Sequelize.INTEGER,
+        type: Sequelize.INTEGER.UNSIGNED,
         allowNull: true,
         references: {
           model: 'users',
@@ -54,12 +53,12 @@ module.exports = {
       created_at: {
         type: Sequelize.DATE,
         allowNull: false,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
+        
       },
       updated_at: {
         type: Sequelize.DATE,
         allowNull: false,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP')
+        
       }
     });
   },

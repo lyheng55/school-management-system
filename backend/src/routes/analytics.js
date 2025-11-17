@@ -19,5 +19,9 @@ router.get('/finance', authenticate, authorize('admin'), analyticsController.get
 // Attendance Analytics - accessible to admin and teachers
 router.get('/attendance', authenticate, authorize('admin', 'teacher'), analyticsController.getAttendanceAnalytics);
 
+// Export routes - accessible to admin and teachers
+router.get('/export/pdf/:reportType', authenticate, authorize('admin', 'teacher'), analyticsController.exportPDFReport);
+router.get('/export/excel/:reportType', authenticate, authorize('admin', 'teacher'), analyticsController.exportExcelReport);
+
 module.exports = router;
 

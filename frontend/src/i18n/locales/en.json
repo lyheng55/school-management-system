@@ -67,7 +67,12 @@
     "forgotPassword": "Forgot password?",
     "noRecordsFound": "No records found",
     "selectAll": "Select All",
-    "deselectAll": "Deselect All"
+    "deselectAll": "Deselect All",
+    "showing": "Showing",
+    "of": "of",
+    "entries": "entries",
+    "perPage": "Per Page",
+    "for": "for"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -163,7 +168,14 @@
     "fileSizeLimit": "File size must be less than 5MB",
     "noGradesRecorded": "No grades recorded",
     "studentInformation": "Student Information",
-    "studentDetails": "Student Details"
+    "studentDetails": "Student Details",
+    "parentInformation": "Parent Information",
+    "relationship": "Relationship",
+    "occupation": "Occupation",
+    "father": "Father",
+    "mother": "Mother",
+    "guardian": "Guardian",
+    "other": "Other"
   },
   "teachers": {
     "title": "Teachers",
@@ -231,12 +243,15 @@
   },
   "timetables": {
     "title": "Timetables",
+    "subtitle": "Manage and view class schedules",
     "addEntry": "Add Entry",
     "editEntry": "Edit Timetable Entry",
     "addNewEntry": "Add New Timetable Entry",
     "filterByClass": "Filter by Class",
     "allClasses": "All Classes",
     "selectClass": "Please select a class to view or manage timetables",
+    "selectClassToView": "Select a Class to View Timetable",
+    "selectClassDescription": "Please select a class from the dropdown above to view its timetable",
     "day": "Day",
     "time": "Time",
     "subject": "Subject",
@@ -253,6 +268,8 @@
     "saturday": "Saturday",
     "sunday": "Sunday",
     "noClassesScheduled": "No classes scheduled",
+    "noClassesForDay": "No classes scheduled for this day",
+    "classesScheduled": "classes scheduled",
     "timeConflict": "Time slot conflicts with existing timetable entry",
     "invalidTime": "Start time must be before end time",
     "failedToCreate": "Failed to create timetable entry",
@@ -780,6 +797,22 @@
     "english": "English",
     "khmer": "ភាសាខ្មែរ"
   },
+  "parents": {
+    "title": "Parents",
+    "addParent": "Add Parent",
+    "editParent": "Edit Parent",
+    "searchPlaceholder": "Search by name or phone...",
+    "filterByRelationship": "Filter by Relationship",
+    "relationship": "Relationship",
+    "occupation": "Occupation",
+    "children": "Children",
+    "child": "child",
+    "noChildren": "No children",
+    "noRecords": "No parents found",
+    "failedToCreate": "Failed to create parent",
+    "failedToUpdate": "Failed to update parent",
+    "failedToDelete": "Failed to delete parent"
+  },
   "reports": {
     "title": "Reports & Analytics",
     "reportType": "Report Type",
@@ -789,6 +822,10 @@
     "student": "Student",
     "subject": "Subject",
     "export": "Export Report",
+    "exportPDF": "Export as PDF",
+    "exportExcel": "Export as Excel",
+    "exporting": "Exporting...",
+    "exportError": "Error exporting report. Please try again.",
     "exportComingSoon": "Export functionality coming soon",
     "noDataAvailable": "No data available for the selected filters",
     "summary": "Summary",

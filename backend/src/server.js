@@ -5,6 +5,7 @@ const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
 const sequelize = require('./config/database');
+const { startAttendanceNotificationJob } = require('./services/attendanceNotificationService');
 
 const app = express();
 
@@ -63,6 +64,9 @@ sequelize.authenticate()
     console.log('Database connection established successfully.');
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
+      
+      // Start attendance notification scheduler
+      startAttendanceNotificationJob();
     });
   })
   .catch(err => {

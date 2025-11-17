@@ -36,6 +36,10 @@ import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import PaymentIcon from '@mui/icons-material/Payment';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
+import FamilyRestroomIcon from '@mui/icons-material/FamilyRestroom';
+import PhoneIcon from '@mui/icons-material/Phone';
+import EmailIcon from '@mui/icons-material/Email';
+import WorkIcon from '@mui/icons-material/Work';
 import Layout from '../components/Layout';
 import api from '../services/api';
 import { useState, useRef } from 'react';
@@ -319,23 +323,134 @@ const StudentDetail = () => {
                     {formatDate(student.admission_date)}
                   </Typography>
                 </Grid>
-                {student.parent && (
-                  <Grid item xs={12}>
-                    <Typography variant="body2" color="text.secondary">
-                      {t('students.parent')}
-                    </Typography>
-                    <Typography variant="body1">
-                      {student.parent.first_name} {student.parent.last_name}
-                    </Typography>
-                  </Grid>
-                )}
+                <Grid item xs={12}>
+                  <Typography variant="body2" color="text.secondary">
+                    {t('students.emergencyContact')}
+                  </Typography>
+                  <Typography variant="body1">
+                    {student.emergency_contact || t('common.none')}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="body2" color="text.secondary">
+                    {t('students.emergencyPhone')}
+                  </Typography>
+                  <Typography variant="body1">
+                    {student.emergency_phone || t('common.none')}
+                  </Typography>
+                </Grid>
               </Grid>
             </CardContent>
           </Card>
         </Grid>
 
+        {/* Parent Information Card */}
+        {student.parent && (
+          <Grid item xs={12} md={4}>
+            <Card>
+              <CardContent>
+                <Box display="flex" alignItems="center" gap={1} mb={2}>
+                  <FamilyRestroomIcon color="primary" />
+                  <Typography variant="h6">
+                    {t('students.parentInformation')}
+                  </Typography>
+                </Box>
+                <Divider sx={{ mb: 2 }} />
+                <Grid container spacing={2}>
+                  <Grid item xs={12}>
+                    <Typography variant="body2" color="text.secondary">
+                      {t('common.name')}
+                    </Typography>
+                    <Typography variant="body1" fontWeight="medium">
+                      {student.parent.first_name} {student.parent.last_name}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Typography variant="body2" color="text.secondary">
+                      {t('students.relationship')}
+                    </Typography>
+                    <Typography variant="body1">
+                      {student.parent.relationship ? 
+                        t(`students.${student.parent.relationship}`) : 
+                        t('common.none')}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <PhoneIcon fontSize="small" color="action" />
+                      <Box>
+                        <Typography variant="body2" color="text.secondary">
+                          {t('common.phone')}
+                        </Typography>
+                        <Typography variant="body1">
+                          {student.parent.phone || t('common.none')}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Grid>
+                  {student.parent.user && (
+                    <>
+                      <Grid item xs={12}>
+                        <Box display="flex" alignItems="center" gap={1}>
+                          <EmailIcon fontSize="small" color="action" />
+                          <Box>
+                            <Typography variant="body2" color="text.secondary">
+                              {t('common.email')}
+                            </Typography>
+                            <Typography variant="body1">
+                              {student.parent.user.email || t('common.none')}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </Grid>
+                      <Grid item xs={12}>
+                        <Box display="flex" alignItems="center" gap={1}>
+                          <PersonIcon fontSize="small" color="action" />
+                          <Box>
+                            <Typography variant="body2" color="text.secondary">
+                              {t('common.username')}
+                            </Typography>
+                            <Typography variant="body1">
+                              {student.parent.user.username || t('common.none')}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </Grid>
+                    </>
+                  )}
+                  {student.parent.occupation && (
+                    <Grid item xs={12}>
+                      <Box display="flex" alignItems="center" gap={1}>
+                        <WorkIcon fontSize="small" color="action" />
+                        <Box>
+                          <Typography variant="body2" color="text.secondary">
+                            {t('students.occupation')}
+                          </Typography>
+                          <Typography variant="body1">
+                            {student.parent.occupation}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Grid>
+                  )}
+                  {student.parent.address && (
+                    <Grid item xs={12}>
+                      <Typography variant="body2" color="text.secondary">
+                        {t('common.address')}
+                      </Typography>
+                      <Typography variant="body1">
+                        {student.parent.address}
+                      </Typography>
+                    </Grid>
+                  )}
+                </Grid>
+              </CardContent>
+            </Card>
+          </Grid>
+        )}
+
         {/* Statistics Cards */}
-        <Grid item xs={12} md={8}>
+        <Grid item xs={12} md={student.parent ? 4 : 8}>
           <Grid container spacing={2}>
             <Grid item xs={12} sm={6} md={3}>
               <Card>

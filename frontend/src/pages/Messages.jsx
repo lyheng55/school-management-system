@@ -29,6 +29,8 @@ import {
   Divider,
   Autocomplete,
   Badge,
+  Pagination,
+  Stack,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -101,6 +103,8 @@ const Messages = () => {
       onSuccess: () => {
         queryClient.invalidateQueries('messages');
         handleCloseCompose();
+        // Reset to first page after sending
+        setPage(1);
       },
       onError: (err) => {
         setError(err.response?.data?.message || t('messages.failedToSend'));
@@ -170,7 +174,7 @@ const Messages = () => {
     setSelectedMessage(message);
     setOpenView(true);
     // Mark as read if viewing inbox message
-    if (tab === 0 && !message.is_read) {
+    if (tab === 0 && isMessageUnread(message)) {
       markAsReadMutation.mutate(message.id);
     }
   };
@@ -195,8 +199,20 @@ const Messages = () => {
   };
 
   const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'N/A';
     return date.toLocaleString();
+  };
+
+  const getMessageDate = (message) => {
+    return message.created_at || message.createdAt || null;
+  };
+
+  const isMessageUnread = (message) => {
+    // Handle both snake_case and camelCase field names
+    const isRead = message.is_read !== undefined ? message.is_read : message.isRead;
+    return isRead === false || isRead === 0;
   };
 
   const getDisplayName = (user) => {
@@ -222,7 +238,10 @@ const Messages = () => {
         </Box>
 
         <Paper sx={{ mb: 2 }}>
-          <Tabs value={tab} onChange={(e, newValue) => setTab(newValue)}>
+          <Tabs value={tab} onChange={(e, newValue) => {
+            setTab(newValue);
+            setPage(1); // Reset to first page when switching tabs
+          }}>
             <Tab
               icon={
                 <Badge badgeContent={inboxData?.unread_count || 0} color="error">
@@ -278,18 +297,18 @@ const Messages = () => {
                     button
                     onClick={() => handleOpenView(message)}
                     sx={{
-                      backgroundColor: tab === 0 && !message.is_read ? 'action.hover' : 'transparent',
+                      backgroundColor: tab === 0 && isMessageUnread(message) ? 'action.hover' : 'transparent',
                     }}
                   >
                     <ListItemText
                       primary={
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Typography variant="subtitle1" fontWeight={tab === 0 && !message.is_read ? 'bold' : 'normal'}>
+                          <Typography variant="subtitle1" fontWeight={tab === 0 && isMessageUnread(message) ? 'bold' : 'normal'}>
                             {tab === 0
                               ? getDisplayName(message.sender)
                               : getDisplayName(message.receiver)}
                           </Typography>
-                          {tab === 0 && !message.is_read && (
+                          {tab === 0 && isMessageUnread(message) && (
                             <Chip label={t('messages.unread')} size="small" color="primary" />
                           )}
                         </Box>
@@ -300,7 +319,7 @@ const Messages = () => {
                             {message.subject || t('messages.noSubject')}
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
-                            {formatDate(message.created_at)}
+                            {formatDate(getMessageDate(message))}
                           </Typography>
                         </Box>
                       }
@@ -334,6 +353,22 @@ const Messages = () => {
             </List>
           )}
         </Paper>
+
+        {/* Pagination Controls */}
+        {currentData?.pagination && currentData.pagination.pages > 1 && (
+          <Box display="flex" justifyContent="center" mt={3}>
+            <Stack spacing={2}>
+              <Pagination
+                count={currentData.pagination.pages}
+                page={page}
+                onChange={(event, value) => setPage(value)}
+                color="primary"
+                showFirstButton
+                showLastButton
+              />
+            </Stack>
+          </Box>
+        )}
 
         {/* Compose Message Dialog */}
         <Dialog open={openCompose} onClose={handleCloseCompose} maxWidth="md" fullWidth>
@@ -424,16 +459,16 @@ const Messages = () => {
                       {t('messages.date')}
                     </Typography>
                     <Typography variant="body1">
-                      {formatDate(selectedMessage.created_at)}
+                      {formatDate(getMessageDate(selectedMessage))}
                     </Typography>
                   </Grid>
-                  {tab === 0 && selectedMessage.is_read && (
+                  {tab === 0 && !isMessageUnread(selectedMessage) && (
                     <Grid item xs={12}>
                       <Typography variant="caption" color="text.secondary">
                         {t('messages.readAt')}
                       </Typography>
                       <Typography variant="body2">
-                        {formatDate(selectedMessage.read_at)}
+                        {formatDate(selectedMessage.read_at || selectedMessage.readAt)}
                       </Typography>
                     </Grid>
                   )}

@@ -1,4 +1,4 @@
-const { Grade, Student, Exam, Subject, User } = require('../models');
+const { Grade, Student, Exam, Subject, User, Class } = require('../models');
 const Joi = require('joi');
 const { Op } = require('sequelize');
 
@@ -117,15 +117,15 @@ exports.getAllGrades = async (req, res) => {
     if (subject_id) where.subject_id = subject_id;
 
     const include = [
-      { model: Student, as: 'student', include: [{ model: Class, as: 'class' }] },
+      { 
+        model: Student, 
+        as: 'student', 
+        include: [{ model: Class, as: 'class' }],
+        ...(class_id && { where: { class_id: parseInt(class_id) } })
+      },
       { model: Exam, as: 'exam' },
       { model: Subject, as: 'subject' }
     ];
-
-    // Filter by class through student
-    if (class_id) {
-      include[0].where = { class_id };
-    }
 
     const { count, rows } = await Grade.findAndCountAll({
       where,

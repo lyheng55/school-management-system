@@ -115,7 +115,17 @@ exports.getStudentById = async (req, res) => {
       include: [
         { model: User, as: 'user', attributes: ['id', 'username', 'email', 'role'] },
         { model: Class, as: 'class' },
-        { model: Parent, as: 'parent' }
+        { 
+          model: Parent, 
+          as: 'parent',
+          include: [
+            { 
+              model: User, 
+              as: 'user', 
+              attributes: ['id', 'username', 'email', 'telegram_chat_id'] 
+            }
+          ]
+        }
       ]
     });
 

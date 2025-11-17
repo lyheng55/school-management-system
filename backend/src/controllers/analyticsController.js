@@ -14,6 +14,7 @@ const {
 } = require('../models');
 const { Op } = require('sequelize');
 const { Sequelize } = require('sequelize');
+const exportService = require('../utils/exportService');
 
 // Dashboard KPIs
 exports.getDashboardKPIs = async (req, res) => {
@@ -192,7 +193,9 @@ exports.getStudentPerformanceAnalytics = async (req, res) => {
       }
       subjectPerformance[subjectName].total++;
       subjectPerformance[subjectName].sum += parseFloat(grade.marks_obtained || 0);
-      subjectPerformance[subjectName].grades.push(grade.grade);
+      if (grade.grade) {
+        subjectPerformance[subjectName].grades.push(grade.grade);
+      }
     });
 
     const subjectStats = Object.keys(subjectPerformance).map(subjectName => ({
@@ -658,6 +661,319 @@ exports.getAttendanceAnalytics = async (req, res) => {
       success: false,
       message: 'Error fetching attendance analytics',
       error: error.message
+    });
+  }
+};
+
+// Helper function to fetch analytics data
+const fetchAnalyticsData = async (reportType, queryParams) => {
+  const { start_date, end_date, class_id, student_id, subject_id, teacher_id } = queryParams;
+
+  switch (reportType) {
+    case 'student-performance': {
+      const where = {};
+      if (student_id) where.student_id = student_id;
+      if (class_id) {
+        const students = await Student.findAll({
+          where: { class_id },
+          attributes: ['id']
+        });
+        where.student_id = { [Op.in]: students.map(s => s.id) };
+      }
+      if (start_date || end_date) {
+        where.created_at = {};
+        if (start_date) where.created_at[Op.gte] = start_date;
+        if (end_date) where.created_at[Op.lte] = end_date;
+      }
+      if (subject_id) where.subject_id = subject_id;
+
+      const grades = await Grade.findAll({
+        where,
+        include: [
+          { model: Student, as: 'student', include: [{ model: Class, as: 'class' }] },
+          { model: Exam, as: 'exam' },
+          { model: Subject, as: 'subject' }
+        ],
+        order: [['created_at', 'DESC']]
+      });
+
+      const totalGrades = grades.length;
+      const totalMarks = grades.reduce((sum, g) => sum + parseFloat(g.marks_obtained || 0), 0);
+      const averageMarks = totalGrades > 0 ? parseFloat((totalMarks / totalGrades).toFixed(2)) : 0;
+
+      const gradeDistribution = {
+        'A+': grades.filter(g => g.grade === 'A+').length,
+        'A': grades.filter(g => g.grade === 'A').length,
+        'B+': grades.filter(g => g.grade === 'B+').length,
+        'B': grades.filter(g => g.grade === 'B').length,
+        'C+': grades.filter(g => g.grade === 'C+').length,
+        'C': grades.filter(g => g.grade === 'C').length,
+        'F': grades.filter(g => g.grade === 'F').length
+      };
+
+      const subjectPerformance = {};
+      grades.forEach(grade => {
+        const subjectName = grade.subject?.name || 'Unknown';
+        if (!subjectPerformance[subjectName]) {
+          subjectPerformance[subjectName] = { total: 0, sum: 0 };
+        }
+        subjectPerformance[subjectName].total++;
+        subjectPerformance[subjectName].sum += parseFloat(grade.marks_obtained || 0);
+      });
+
+      const subjectStats = Object.keys(subjectPerformance).map(subjectName => ({
+        subject_name: subjectName,
+        name: subjectName,
+        average_marks: parseFloat((subjectPerformance[subjectName].sum / subjectPerformance[subjectName].total).toFixed(2))
+      }));
+
+      const classPerformance = {};
+      grades.forEach(grade => {
+        const className = grade.student?.class?.name || 'Unknown';
+        if (!classPerformance[className]) {
+          classPerformance[className] = { total: 0, sum: 0 };
+        }
+        classPerformance[className].total++;
+        classPerformance[className].sum += parseFloat(grade.marks_obtained || 0);
+      });
+
+      const classStats = Object.keys(classPerformance).map(className => ({
+        class_name: className,
+        name: className,
+        average_marks: parseFloat((classPerformance[className].sum / classPerformance[className].total).toFixed(2))
+      }));
+
+      return {
+        summary: { totalGrades, averageMarks, gradeDistribution },
+        bySubject: subjectStats,
+        byClass: classStats,
+        monthlyTrend: []
+      };
+    }
+
+    case 'staff-performance': {
+      const teachers = await Teacher.findAll({
+        include: [
+          { model: User, as: 'user', attributes: ['id', 'username', 'email'] },
+          { model: Class, as: 'classes', attributes: ['id', 'name'] }
+        ]
+      });
+
+      const where = {};
+      if (teacher_id) where.marked_by = teacher_id;
+      if (start_date || end_date) {
+        where.date = {};
+        if (start_date) where.date[Op.gte] = start_date;
+        if (end_date) where.date[Op.lte] = end_date;
+      }
+
+      const attendanceRecords = await Attendance.findAll({ where });
+      const exams = await Exam.findAll({ where: teacher_id ? { created_by: teacher_id } : {} });
+      const grades = await Grade.findAll({ where: teacher_id ? { created_by: teacher_id } : {} });
+
+      const teacherStats = teachers.map(teacher => {
+        const teacherAttendance = attendanceRecords.filter(a => a.marked_by === teacher.user_id).length;
+        const teacherExams = exams.filter(e => e.created_by === teacher.user_id).length;
+        const teacherGrades = grades.filter(g => g.created_by === teacher.user_id).length;
+
+        return {
+          name: `${teacher.first_name} ${teacher.last_name}`,
+          classes: teacher.classes?.length || 0,
+          attendanceMarked: teacherAttendance,
+          examsCreated: teacherExams,
+          gradesEntered: teacherGrades
+        };
+      });
+
+      return {
+        summary: {
+          totalTeachers: teachers.length,
+          activeTeachers: teachers.filter(t => t.status === 'active').length,
+          totalAttendanceMarked: attendanceRecords.length,
+          totalExams: exams.length
+        },
+        teachers: teacherStats
+      };
+    }
+
+    case 'finance': {
+      const fees = await Fee.findAll({
+        include: [
+          { model: Student, as: 'student', include: [{ model: Class, as: 'class' }] }
+        ],
+        order: [['created_at', 'DESC']]
+      });
+
+      const payments = await Payment.findAll({
+        include: [{ model: Fee, as: 'fee' }],
+        order: [['payment_date', 'DESC']]
+      });
+
+      const totalFees = fees.reduce((sum, f) => sum + parseFloat(f.amount || 0), 0);
+      const totalPayments = payments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+      const pendingAmount = totalFees - totalPayments;
+
+      const feeTypeBreakdown = {};
+      fees.forEach(fee => {
+        const type = fee.fee_type || 'Other';
+        feeTypeBreakdown[type] = (feeTypeBreakdown[type] || 0) + parseFloat(fee.amount || 0);
+      });
+
+      const feeTypeStats = Object.keys(feeTypeBreakdown).map(type => ({
+        fee_type: type,
+        name: type,
+        amount: feeTypeBreakdown[type]
+      }));
+
+      const monthlyPayments = {};
+      payments.forEach(payment => {
+        const month = payment.payment_date ? new Date(payment.payment_date).toISOString().slice(0, 7) : 'Unknown';
+        monthlyPayments[month] = (monthlyPayments[month] || 0) + parseFloat(payment.amount || 0);
+      });
+
+      const monthlyStats = Object.keys(monthlyPayments).sort().map(month => ({
+        month,
+        name: month,
+        amount: monthlyPayments[month]
+      }));
+
+      return {
+        summary: { totalFees, totalPayments, pendingAmount },
+        feeTypeBreakdown: feeTypeStats,
+        monthlyPayments: monthlyStats
+      };
+    }
+
+    case 'attendance': {
+      const where = {};
+      if (start_date || end_date) {
+        where.date = {};
+        if (start_date) where.date[Op.gte] = start_date;
+        if (end_date) where.date[Op.lte] = end_date;
+      }
+      if (class_id) {
+        const students = await Student.findAll({ where: { class_id }, attributes: ['id'] });
+        where.student_id = { [Op.in]: students.map(s => s.id) };
+      }
+      if (student_id) where.student_id = student_id;
+
+      const attendanceRecords = await Attendance.findAll({
+        where,
+        include: [
+          { model: Student, as: 'student', include: [{ model: Class, as: 'class' }] }
+        ],
+        order: [['date', 'DESC']]
+      });
+
+      const totalRecords = attendanceRecords.length;
+      const present = attendanceRecords.filter(a => a.status === 'present').length;
+      const absent = attendanceRecords.filter(a => a.status === 'absent').length;
+      const late = attendanceRecords.filter(a => a.status === 'late').length;
+      const attendanceRate = totalRecords > 0 ? present / totalRecords : 0;
+
+      const dailyTrend = {};
+      attendanceRecords.forEach(record => {
+        const date = record.date;
+        if (!dailyTrend[date]) {
+          dailyTrend[date] = { total: 0, present: 0 };
+        }
+        dailyTrend[date].total++;
+        if (record.status === 'present') dailyTrend[date].present++;
+      });
+
+      const dailyStats = Object.keys(dailyTrend).sort().map(date => ({
+        date,
+        name: date,
+        attendanceRate: dailyTrend[date].total > 0 ? dailyTrend[date].present / dailyTrend[date].total : 0,
+        count: dailyTrend[date].total
+      }));
+
+      return {
+        summary: { totalRecords, present, absent, late, attendanceRate },
+        dailyTrend: dailyStats
+      };
+    }
+
+    default:
+      return {};
+  }
+};
+
+// Export PDF Report
+exports.exportPDFReport = async (req, res) => {
+  try {
+    const { reportType } = req.params;
+    const filters = { startDate: req.query.start_date, endDate: req.query.end_date };
+
+    // Validate report type
+    const validTypes = ['student-performance', 'staff-performance', 'finance', 'attendance'];
+    if (!validTypes.includes(reportType)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid report type'
+      });
+    }
+
+    // Fetch data
+    const data = await fetchAnalyticsData(reportType, req.query);
+
+    // Generate PDF
+    const pdfBuffer = await exportService.generatePDFReport(reportType, data, filters);
+
+    const timestamp = Date.now();
+    const filename = `${reportType}-report-${timestamp}.pdf`;
+    
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error('Export PDF error:', error);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({
+      success: false,
+      message: 'Error generating PDF report',
+      error: error.message || 'Unknown error occurred'
+    });
+  }
+};
+
+// Export Excel Report
+exports.exportExcelReport = async (req, res) => {
+  try {
+    const { reportType } = req.params;
+    const filters = { startDate: req.query.start_date, endDate: req.query.end_date };
+
+    // Validate report type
+    const validTypes = ['student-performance', 'staff-performance', 'finance', 'attendance'];
+    if (!validTypes.includes(reportType)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid report type'
+      });
+    }
+
+    // Fetch data
+    const data = await fetchAnalyticsData(reportType, req.query);
+
+    // Generate Excel
+    const workbook = await exportService.generateExcelReport(reportType, data, filters);
+
+    const timestamp = Date.now();
+    const filename = `${reportType}-report-${timestamp}.xlsx`;
+    
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`);
+    
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    console.error('Export Excel error:', error);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({
+      success: false,
+      message: 'Error generating Excel report',
+      error: error.message || 'Unknown error occurred'
     });
   }
 };

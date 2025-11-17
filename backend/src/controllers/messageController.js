@@ -1,6 +1,7 @@
 const { Message, User } = require('../models');
 const Joi = require('joi');
 const { Op } = require('sequelize');
+const telegramService = require('../utils/telegramService');
 
 const messageSchema = Joi.object({
   receiver_id: Joi.number().integer().required(),
@@ -20,7 +21,9 @@ exports.sendMessage = async (req, res) => {
     }
 
     // Check if receiver exists
-    const receiver = await User.findByPk(value.receiver_id);
+    const receiver = await User.findByPk(value.receiver_id, {
+      attributes: ['id', 'username', 'email', 'role', 'telegram_chat_id']
+    });
     if (!receiver) {
       return res.status(404).json({
         success: false,
@@ -45,10 +48,30 @@ exports.sendMessage = async (req, res) => {
 
     const messageWithRelations = await Message.findByPk(message.id, {
       include: [
-        { model: User, as: 'sender', attributes: ['id', 'username', 'email', 'role'] },
-        { model: User, as: 'receiver', attributes: ['id', 'username', 'email', 'role'] }
+        { model: User, as: 'sender', attributes: ['id', 'username', 'email', 'role', 'telegram_chat_id'] },
+        { model: User, as: 'receiver', attributes: ['id', 'username', 'email', 'role', 'telegram_chat_id'] }
       ]
     });
+
+    // Send Telegram notification to receiver if they have telegram_chat_id
+    if (receiver.telegram_chat_id) {
+      try {
+        const senderName = req.user.username || req.user.email || 'System';
+        const subjectText = value.subject ? `\n${telegramService.formatBold('Subject:')} ${telegramService.escapeHtml(value.subject)}` : '';
+        const telegramMessage = `
+${telegramService.formatBold('📨 New Message')}
+
+${telegramService.formatBold('From:')} ${telegramService.escapeHtml(senderName)}${subjectText}
+
+${telegramService.escapeHtml(value.content)}
+        `.trim();
+
+        await telegramService.sendMessage(receiver.telegram_chat_id, telegramMessage);
+      } catch (telegramError) {
+        // Don't fail the request if Telegram notification fails
+        console.error('Telegram notification error:', telegramError.message);
+      }
+    }
 
     res.status(201).json({
       success: true,

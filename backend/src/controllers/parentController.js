@@ -1,5 +1,16 @@
 const { Parent, Student, Grade, Attendance, Fee, Payment, Timetable, Exam, Class, Subject, User, Teacher } = require('../models');
 const { Op } = require('sequelize');
+const Joi = require('joi');
+
+const parentSchema = Joi.object({
+  user_id: Joi.number().integer().optional(),
+  first_name: Joi.string().required(),
+  last_name: Joi.string().required(),
+  phone: Joi.string().required(),
+  occupation: Joi.string().optional().allow('', null),
+  address: Joi.string().optional().allow('', null),
+  relationship: Joi.string().valid('father', 'mother', 'guardian', 'other').required()
+});
 
 // Get parent's children
 exports.getMyChildren = async (req, res) => {
@@ -485,6 +496,260 @@ exports.updateProfile = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error updating profile',
+      error: error.message
+    });
+  }
+};
+
+// Admin CRUD operations
+exports.getAllParents = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, search, relationship } = req.query;
+    const offset = (page - 1) * limit;
+
+    const where = {};
+    if (search) {
+      where[Op.or] = [
+        { first_name: { [Op.like]: `%${search}%` } },
+        { last_name: { [Op.like]: `%${search}%` } },
+        { phone: { [Op.like]: `%${search}%` } }
+      ];
+    }
+    if (relationship) where.relationship = relationship;
+
+    const { count, rows } = await Parent.findAndCountAll({
+      where,
+      include: [
+        { model: User, as: 'user', attributes: ['id', 'username', 'email', 'role'] },
+        { 
+          model: Student, 
+          as: 'students',
+          attributes: ['id', 'first_name', 'last_name', 'student_id'],
+          include: [{ model: Class, as: 'class', attributes: ['id', 'name'] }]
+        }
+      ],
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      order: [['created_at', 'DESC']],
+      distinct: true
+    });
+
+    res.json({
+      success: true,
+      data: {
+        parents: rows,
+        pagination: {
+          total: count,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          pages: Math.ceil(count / limit)
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Get parents error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching parents',
+      error: error.message
+    });
+  }
+};
+
+exports.getParentById = async (req, res) => {
+  try {
+    const parent = await Parent.findByPk(req.params.id, {
+      include: [
+        { model: User, as: 'user', attributes: ['id', 'username', 'email', 'role', 'telegram_chat_id'] },
+        { 
+          model: Student, 
+          as: 'students',
+          attributes: ['id', 'first_name', 'last_name', 'student_id'],
+          include: [{ model: Class, as: 'class', attributes: ['id', 'name'] }]
+        }
+      ]
+    });
+
+    if (!parent) {
+      return res.status(404).json({
+        success: false,
+        message: 'Parent not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: parent
+    });
+  } catch (error) {
+    console.error('Get parent error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching parent',
+      error: error.message
+    });
+  }
+};
+
+exports.createParent = async (req, res) => {
+  try {
+    const { error, value } = parentSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message: error.details[0].message
+      });
+    }
+
+    // If user_id is provided, use it; otherwise create a new user account
+    let userId = value.user_id;
+    
+    if (!userId) {
+      // Generate username from name and phone
+      const baseUsername = `${value.first_name.toLowerCase()}${value.last_name.toLowerCase()}`.replace(/\s+/g, '');
+      let username = baseUsername;
+      let counter = 1;
+      
+      // Ensure username is unique
+      while (await User.findOne({ where: { username } })) {
+        username = `${baseUsername}${counter}`;
+        counter++;
+      }
+
+      // Create user account with default password
+      const defaultPassword = 'parent123'; // Default password, should be changed on first login
+      const user = await User.create({
+        username,
+        password: defaultPassword,
+        role: 'parent',
+        email: null
+      });
+      
+      userId = user.id;
+    } else {
+      // Verify user exists and has parent role
+      const user = await User.findByPk(userId);
+      if (!user) {
+        return res.status(400).json({
+          success: false,
+          message: 'User not found'
+        });
+      }
+      if (user.role !== 'parent') {
+        return res.status(400).json({
+          success: false,
+          message: 'User must have parent role'
+        });
+      }
+      // Check if parent already exists for this user
+      const existingParent = await Parent.findOne({ where: { user_id: userId } });
+      if (existingParent) {
+        return res.status(400).json({
+          success: false,
+          message: 'Parent profile already exists for this user'
+        });
+      }
+    }
+
+    // Create parent record
+    const parent = await Parent.create({
+      ...value,
+      user_id: userId
+    });
+
+    const parentWithRelations = await Parent.findByPk(parent.id, {
+      include: [
+        { model: User, as: 'user', attributes: ['id', 'username', 'email', 'role'] },
+        { model: Student, as: 'students' }
+      ]
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Parent created successfully',
+      data: parentWithRelations
+    });
+  } catch (error) {
+    console.error('Create parent error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error creating parent',
+      error: error.message
+    });
+  }
+};
+
+exports.updateParent = async (req, res) => {
+  try {
+    const parent = await Parent.findByPk(req.params.id);
+    if (!parent) {
+      return res.status(404).json({
+        success: false,
+        message: 'Parent not found'
+      });
+    }
+
+    const { error, value } = parentSchema.validate(req.body, { abortEarly: false });
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message: error.details.map(d => d.message).join(', ')
+      });
+    }
+
+    await parent.update(value);
+    const updatedParent = await Parent.findByPk(parent.id, {
+      include: [
+        { model: User, as: 'user', attributes: ['id', 'username', 'email', 'role'] },
+        { model: Student, as: 'students' }
+      ]
+    });
+
+    res.json({
+      success: true,
+      message: 'Parent updated successfully',
+      data: updatedParent
+    });
+  } catch (error) {
+    console.error('Update parent error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating parent',
+      error: error.message
+    });
+  }
+};
+
+exports.deleteParent = async (req, res) => {
+  try {
+    const parent = await Parent.findByPk(req.params.id);
+    if (!parent) {
+      return res.status(404).json({
+        success: false,
+        message: 'Parent not found'
+      });
+    }
+
+    // Check if parent has students
+    const students = await Student.findAll({ where: { parent_id: parent.id } });
+    if (students.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot delete parent with associated students. Please reassign students first.'
+      });
+    }
+
+    await parent.destroy();
+
+    res.json({
+      success: true,
+      message: 'Parent deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete parent error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting parent',
       error: error.message
     });
   }

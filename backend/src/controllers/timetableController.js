@@ -65,10 +65,23 @@ exports.createTimetable = async (req, res) => {
 
     const timetable = await Timetable.create(value);
     const timetableWithRelations = await Timetable.findByPk(timetable.id, {
+      attributes: ['id', 'class_id', 'subject_id', 'teacher_id', 'day_of_week', 'start_time', 'end_time', 'room'],
       include: [
-        { model: Class, as: 'class' },
-        { model: Subject, as: 'subject' },
-        { model: Teacher, as: 'teacher' }
+        { 
+          model: Class, 
+          as: 'class',
+          attributes: ['id', 'name', 'section']
+        },
+        { 
+          model: Subject, 
+          as: 'subject',
+          attributes: ['id', 'name', 'code']
+        },
+        { 
+          model: Teacher, 
+          as: 'teacher',
+          attributes: ['id', 'first_name', 'last_name']
+        }
       ]
     });
 
@@ -89,29 +102,61 @@ exports.createTimetable = async (req, res) => {
 
 exports.getAllTimetables = async (req, res) => {
   try {
-    const { class_id, teacher_id, day_of_week } = req.query;
+    const { class_id, teacher_id, day_of_week, page = 1, limit = 50 } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    // Debug: Log the query parameters
+    console.log('getAllTimetables - Query params:', { class_id, teacher_id, day_of_week, page, limit });
 
     const where = {};
-    if (class_id) where.class_id = class_id;
+    if (class_id) {
+      where.class_id = parseInt(class_id); // Ensure it's an integer
+      console.log('Filtering by class_id:', where.class_id);
+    }
     if (teacher_id) where.teacher_id = teacher_id;
     if (day_of_week) where.day_of_week = day_of_week;
 
-    const timetables = await Timetable.findAll({
+    // Optimize query: only select needed fields and limit related data
+    const { count, rows } = await Timetable.findAndCountAll({
       where,
+      attributes: ['id', 'class_id', 'subject_id', 'teacher_id', 'day_of_week', 'start_time', 'end_time', 'room'],
       include: [
-        { model: Class, as: 'class' },
-        { model: Subject, as: 'subject' },
-        { model: Teacher, as: 'teacher' }
+        { 
+          model: Class, 
+          as: 'class',
+          attributes: ['id', 'name', 'section']
+        },
+        { 
+          model: Subject, 
+          as: 'subject',
+          attributes: ['id', 'name', 'code']
+        },
+        { 
+          model: Teacher, 
+          as: 'teacher',
+          attributes: ['id', 'first_name', 'last_name']
+        }
       ],
       order: [
         ['day_of_week', 'ASC'],
         ['start_time', 'ASC']
-      ]
+      ],
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      distinct: true // Important for correct count with includes
     });
 
     res.json({
       success: true,
-      data: timetables
+      data: {
+        timetables: rows,
+        pagination: {
+          total: count,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          pages: Math.ceil(count / parseInt(limit))
+        }
+      }
     });
   } catch (error) {
     console.error('Get timetables error:', error);
@@ -126,10 +171,23 @@ exports.getAllTimetables = async (req, res) => {
 exports.getTimetableById = async (req, res) => {
   try {
     const timetable = await Timetable.findByPk(req.params.id, {
+      attributes: ['id', 'class_id', 'subject_id', 'teacher_id', 'day_of_week', 'start_time', 'end_time', 'room'],
       include: [
-        { model: Class, as: 'class' },
-        { model: Subject, as: 'subject' },
-        { model: Teacher, as: 'teacher' }
+        { 
+          model: Class, 
+          as: 'class',
+          attributes: ['id', 'name', 'section']
+        },
+        { 
+          model: Subject, 
+          as: 'subject',
+          attributes: ['id', 'name', 'code']
+        },
+        { 
+          model: Teacher, 
+          as: 'teacher',
+          attributes: ['id', 'first_name', 'last_name']
+        }
       ]
     });
 
@@ -160,10 +218,23 @@ exports.getTimetableByClass = async (req, res) => {
 
     const timetables = await Timetable.findAll({
       where: { class_id },
+      attributes: ['id', 'class_id', 'subject_id', 'teacher_id', 'day_of_week', 'start_time', 'end_time', 'room'],
       include: [
-        { model: Class, as: 'class' },
-        { model: Subject, as: 'subject' },
-        { model: Teacher, as: 'teacher' }
+        { 
+          model: Class, 
+          as: 'class',
+          attributes: ['id', 'name', 'section']
+        },
+        { 
+          model: Subject, 
+          as: 'subject',
+          attributes: ['id', 'name', 'code']
+        },
+        { 
+          model: Teacher, 
+          as: 'teacher',
+          attributes: ['id', 'first_name', 'last_name']
+        }
       ],
       order: [
         ['day_of_week', 'ASC'],
@@ -247,10 +318,23 @@ exports.updateTimetable = async (req, res) => {
 
     await timetable.update(value);
     const updatedTimetable = await Timetable.findByPk(timetable.id, {
+      attributes: ['id', 'class_id', 'subject_id', 'teacher_id', 'day_of_week', 'start_time', 'end_time', 'room'],
       include: [
-        { model: Class, as: 'class' },
-        { model: Subject, as: 'subject' },
-        { model: Teacher, as: 'teacher' }
+        { 
+          model: Class, 
+          as: 'class',
+          attributes: ['id', 'name', 'section']
+        },
+        { 
+          model: Subject, 
+          as: 'subject',
+          attributes: ['id', 'name', 'code']
+        },
+        { 
+          model: Teacher, 
+          as: 'teacher',
+          attributes: ['id', 'first_name', 'last_name']
+        }
       ]
     });
 

@@ -73,13 +73,13 @@ exports.getAllAchievements = async (req, res) => {
     }
 
     const include = [
-      { model: Student, as: 'student', include: [{ model: Class, as: 'class' }] }
+      { 
+        model: Student, 
+        as: 'student', 
+        include: [{ model: Class, as: 'class' }],
+        ...(class_id && { where: { class_id: parseInt(class_id) } })
+      }
     ];
-
-    // Filter by class through student
-    if (class_id) {
-      include[0].where = { class_id };
-    }
 
     const { count, rows } = await Achievement.findAndCountAll({
       where,

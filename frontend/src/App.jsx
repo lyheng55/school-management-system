@@ -10,6 +10,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Students from './pages/Students';
 import Teachers from './pages/Teachers';
+import Parents from './pages/Parents';
 import Classes from './pages/Classes';
 import Attendance from './pages/Attendance';
 import Exams from './pages/Exams';
@@ -127,6 +128,14 @@ const AppContent = () => {
                 element={
                   <ProtectedRoute>
                     <TeacherDetail />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/parents"
+                element={
+                  <ProtectedRoute>
+                    <Parents />
                   </ProtectedRoute>
                 }
               />

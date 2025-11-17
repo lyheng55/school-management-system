@@ -26,6 +26,8 @@ import {
   Grid,
   Alert,
   CircularProgress,
+  Pagination,
+  Stack,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -298,6 +300,22 @@ const Behaviors = () => {
           </TableBody>
         </Table>
       </TableContainer>
+
+      {/* Pagination Controls */}
+      {data?.pagination && data.pagination.pages > 1 && (
+        <Box display="flex" justifyContent="center" mt={3}>
+          <Stack spacing={2}>
+            <Pagination
+              count={data.pagination.pages}
+              page={page}
+              onChange={(event, value) => setPage(value)}
+              color="primary"
+              showFirstButton
+              showLastButton
+            />
+          </Stack>
+        </Box>
+      )}
 
       <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
         <DialogTitle>

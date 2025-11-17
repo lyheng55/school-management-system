@@ -45,6 +45,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import BuildIcon from '@mui/icons-material/Build';
 import AssessmentIcon from '@mui/icons-material/Assessment';
+import FamilyRestroomIcon from '@mui/icons-material/FamilyRestroom';
 import { useAuth } from '../context/AuthContext';
 
 const drawerWidth = 240;
@@ -76,6 +77,7 @@ const Layout = ({ children }) => {
       { text: t('nav.dashboard'), key: 'dashboard', icon: <DashboardIcon />, path: '/' },
       { text: t('nav.students'), key: 'students', icon: <PeopleIcon />, path: '/students' },
       { text: t('nav.teachers'), key: 'teachers', icon: <SchoolIcon />, path: '/teachers' },
+      { text: t('nav.parents'), key: 'parents', icon: <FamilyRestroomIcon />, path: '/parents' },
       { text: t('nav.classes'), key: 'classes', icon: <ClassIcon />, path: '/classes' },
       { text: t('nav.subjects'), key: 'subjects', icon: <BookIcon />, path: '/subjects' },
       { text: t('nav.timetables'), key: 'timetables', icon: <ScheduleIcon />, path: '/timetables' },
