@@ -47,6 +47,23 @@ const User = sequelize.define('User', {
     allowNull: true,
     unique: true,
     comment: 'Telegram chat ID for notifications'
+  },
+  login_attempts: {
+    type: DataTypes.INTEGER.UNSIGNED,
+    allowNull: false,
+    defaultValue: 0,
+    comment: 'Number of failed login attempts'
+  },
+  is_locked: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+    comment: 'Whether the account is locked due to failed login attempts'
+  },
+  locked_at: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    comment: 'Timestamp when the account was locked'
   }
 }, {
   tableName: 'users',
