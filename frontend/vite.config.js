@@ -5,7 +5,8 @@ export default defineConfig({
   plugins: [react()],
   define: {
     // Set API URL for production builds - can be overridden by VITE_API_URL env var
-    'import.meta.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || 'http://192.168.20.82:5000/api'),
+    // In Docker, use relative path /api which will be proxied by nginx
+    'import.meta.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || '/api'),
   },
   server: {
     port: 3000,

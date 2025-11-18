@@ -12,6 +12,9 @@ const sequelize = require('./config/database');
 
 const app = express();
 
+// Trust proxy - required when behind reverse proxy (nginx, Docker, etc.)
+app.set('trust proxy', true);
+
 // Security middleware
 app.use(helmet());
 // CORS configuration - allow multiple origins including IP addresses
