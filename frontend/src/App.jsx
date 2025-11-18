@@ -108,7 +108,7 @@ const AppContent = () => {
               <Route
                 path="/"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={['admin', 'teacher', 'student']}>
                     <Dashboard />
                   </ProtectedRoute>
                 }
@@ -117,7 +117,7 @@ const AppContent = () => {
               <Route
                 path="/parent"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={['parent']}>
                     <Navigate to="/parent/dashboard" replace />
                   </ProtectedRoute>
                 }
@@ -125,7 +125,7 @@ const AppContent = () => {
               <Route
                 path="/students"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={['admin', 'teacher']}>
                     <Students />
                   </ProtectedRoute>
                 }
@@ -133,7 +133,7 @@ const AppContent = () => {
               <Route
                 path="/students/:id"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={['admin', 'teacher']}>
                     <StudentDetail />
                   </ProtectedRoute>
                 }
@@ -141,7 +141,7 @@ const AppContent = () => {
               <Route
                 path="/teachers"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={['admin']}>
                     <Teachers />
                   </ProtectedRoute>
                 }
@@ -149,7 +149,7 @@ const AppContent = () => {
               <Route
                 path="/teachers/:id"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={['admin']}>
                     <TeacherDetail />
                   </ProtectedRoute>
                 }
@@ -157,7 +157,7 @@ const AppContent = () => {
               <Route
                 path="/parents"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={['admin']}>
                     <Parents />
                   </ProtectedRoute>
                 }
@@ -165,7 +165,7 @@ const AppContent = () => {
               <Route
                 path="/classes"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={['admin', 'teacher']}>
                     <Classes />
                   </ProtectedRoute>
                 }
@@ -173,7 +173,7 @@ const AppContent = () => {
               <Route
                 path="/classes/:id"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={['admin', 'teacher']}>
                     <ClassDetail />
                   </ProtectedRoute>
                 }
@@ -181,7 +181,7 @@ const AppContent = () => {
               <Route
                 path="/attendance"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={['admin', 'teacher']}>
                     <Attendance />
                   </ProtectedRoute>
                 }
@@ -189,7 +189,7 @@ const AppContent = () => {
               <Route
                 path="/exams"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={['admin', 'teacher']}>
                     <Exams />
                   </ProtectedRoute>
                 }
@@ -197,7 +197,7 @@ const AppContent = () => {
               <Route
                 path="/exams/:id"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={['admin', 'teacher']}>
                     <ExamDetail />
                   </ProtectedRoute>
                 }
@@ -205,7 +205,7 @@ const AppContent = () => {
               <Route
                 path="/grades"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={['admin', 'teacher', 'student']}>
                     <Grades />
                   </ProtectedRoute>
                 }
@@ -213,7 +213,7 @@ const AppContent = () => {
               <Route
                 path="/grades/:id"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={['admin', 'teacher', 'student']}>
                     <GradeDetail />
                   </ProtectedRoute>
                 }
@@ -221,7 +221,7 @@ const AppContent = () => {
               <Route
                 path="/behaviors"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={['admin', 'teacher']}>
                     <Behaviors />
                   </ProtectedRoute>
                 }
@@ -229,7 +229,7 @@ const AppContent = () => {
               <Route
                 path="/achievements"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={['admin', 'teacher', 'student']}>
                     <Achievements />
                   </ProtectedRoute>
                 }
@@ -237,7 +237,7 @@ const AppContent = () => {
               <Route
                 path="/fees"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={['admin']}>
                     <Fees />
                   </ProtectedRoute>
                 }
@@ -245,7 +245,7 @@ const AppContent = () => {
               <Route
                 path="/fees/:id"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={['admin']}>
                     <FeeDetail />
                   </ProtectedRoute>
                 }
@@ -253,7 +253,7 @@ const AppContent = () => {
               <Route
                 path="/payments"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={['admin']}>
                     <Payments />
                   </ProtectedRoute>
                 }
@@ -261,7 +261,7 @@ const AppContent = () => {
               <Route
                 path="/payments/:id"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={['admin']}>
                     <PaymentDetail />
                   </ProtectedRoute>
                 }
@@ -269,7 +269,7 @@ const AppContent = () => {
               <Route
                 path="/messages"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={['admin', 'teacher', 'parent', 'student']}>
                     <Messages />
                   </ProtectedRoute>
                 }
@@ -277,7 +277,7 @@ const AppContent = () => {
               <Route
                 path="/announcements"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={['admin', 'teacher', 'parent', 'student']}>
                     <Announcements />
                   </ProtectedRoute>
                 }
@@ -285,7 +285,7 @@ const AppContent = () => {
               <Route
                 path="/events"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={['admin', 'teacher', 'parent', 'student']}>
                     <Events />
                   </ProtectedRoute>
                 }
@@ -293,7 +293,7 @@ const AppContent = () => {
               <Route
                 path="/books"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={['admin', 'teacher', 'student']}>
                     <Books />
                   </ProtectedRoute>
                 }
@@ -301,7 +301,7 @@ const AppContent = () => {
               <Route
                 path="/borrows"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={['admin', 'teacher', 'student']}>
                     <Borrows />
                   </ProtectedRoute>
                 }
@@ -309,7 +309,7 @@ const AppContent = () => {
               <Route
                 path="/parent/dashboard"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={['parent']}>
                     <ParentDashboard />
                   </ProtectedRoute>
                 }
@@ -317,7 +317,7 @@ const AppContent = () => {
               <Route
                 path="/parent/grades/:childId?"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={['parent']}>
                     <ParentGrades />
                   </ProtectedRoute>
                 }
@@ -325,7 +325,7 @@ const AppContent = () => {
               <Route
                 path="/parent/attendance/:childId?"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={['parent']}>
                     <ParentAttendance />
                   </ProtectedRoute>
                 }
@@ -333,7 +333,7 @@ const AppContent = () => {
               <Route
                 path="/parent/fees/:childId?"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={['parent']}>
                     <ParentFees />
                   </ProtectedRoute>
                 }
@@ -341,7 +341,7 @@ const AppContent = () => {
               <Route
                 path="/parent/timetable/:childId?"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={['parent']}>
                     <ParentTimetable />
                   </ProtectedRoute>
                 }
@@ -349,7 +349,7 @@ const AppContent = () => {
               <Route
                 path="/subjects"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={['admin', 'teacher']}>
                     <Subjects />
                   </ProtectedRoute>
                 }
@@ -357,7 +357,7 @@ const AppContent = () => {
               <Route
                 path="/timetables"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={['admin', 'teacher']}>
                     <Timetables />
                   </ProtectedRoute>
                 }
@@ -365,7 +365,7 @@ const AppContent = () => {
               <Route
                 path="/routes"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={['admin']}>
                     <RoutesPage />
                   </ProtectedRoute>
                 }
@@ -373,7 +373,7 @@ const AppContent = () => {
               <Route
                 path="/vehicles"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={['admin']}>
                     <Vehicles />
                   </ProtectedRoute>
                 }
@@ -381,7 +381,7 @@ const AppContent = () => {
               <Route
                 path="/drivers"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={['admin']}>
                     <Drivers />
                   </ProtectedRoute>
                 }
@@ -389,7 +389,7 @@ const AppContent = () => {
               <Route
                 path="/assets"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={['admin']}>
                     <Assets />
                   </ProtectedRoute>
                 }
@@ -397,7 +397,7 @@ const AppContent = () => {
               <Route
                 path="/maintenances"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={['admin']}>
                     <Maintenances />
                   </ProtectedRoute>
                 }
@@ -405,7 +405,7 @@ const AppContent = () => {
               <Route
                 path="/reports"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={['admin']}>
                     <Reports />
                   </ProtectedRoute>
                 }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -60,6 +60,7 @@ const Layout = ({ children }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [languageAnchor, setLanguageAnchor] = useState(null);
   const [permissionError, setPermissionError] = useState(null);
+  const [rateLimitError, setRateLimitError] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
   const { logout, user } = useAuth();
@@ -98,51 +99,103 @@ const Layout = ({ children }) => {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  // Menu items based on user role
-  const getMenuItems = () => {
-    if (user?.role === 'parent') {
-      return [
-        { text: t('parentDashboard.title'), key: 'parent-dashboard', icon: <DashboardIcon />, path: '/parent/dashboard' },
-        { text: t('parentGrades.title'), key: 'parent-grades', icon: <GradeIcon />, path: '/parent/grades' },
-        { text: t('parentAttendance.title'), key: 'parent-attendance', icon: <AssignmentIcon />, path: '/parent/attendance' },
-        { text: t('parentFees.title'), key: 'parent-fees', icon: <AttachMoneyIcon />, path: '/parent/fees' },
-        { text: t('parentTimetable.title'), key: 'parent-timetable', icon: <ScheduleIcon />, path: '/parent/timetable' },
-        { text: t('nav.messages'), key: 'messages', icon: <MailIcon />, path: '/messages' },
-        { text: t('nav.announcements'), key: 'announcements', icon: <AnnouncementIcon />, path: '/announcements' },
-        { text: t('nav.events'), key: 'events', icon: <EventIcon />, path: '/events' },
-      ];
-    }
-    // Admin/Teacher/Staff menu
-    return [
-      { text: t('nav.dashboard'), key: 'dashboard', icon: <DashboardIcon />, path: '/' },
-      { text: t('nav.students'), key: 'students', icon: <PeopleIcon />, path: '/students' },
-      { text: t('nav.teachers'), key: 'teachers', icon: <SchoolIcon />, path: '/teachers' },
-      { text: t('nav.parents'), key: 'parents', icon: <FamilyRestroomIcon />, path: '/parents' },
-      { text: t('nav.classes'), key: 'classes', icon: <ClassIcon />, path: '/classes' },
-      { text: t('nav.subjects'), key: 'subjects', icon: <BookIcon />, path: '/subjects' },
-      { text: t('nav.timetables'), key: 'timetables', icon: <ScheduleIcon />, path: '/timetables' },
-      { text: t('nav.attendance'), key: 'attendance', icon: <AssignmentIcon />, path: '/attendance' },
-      { text: t('nav.exams'), key: 'exams', icon: <QuizIcon />, path: '/exams' },
-      { text: t('nav.grades'), key: 'grades', icon: <GradeIcon />, path: '/grades' },
-      { text: t('nav.behaviors'), key: 'behaviors', icon: <PsychologyIcon />, path: '/behaviors' },
-      { text: t('nav.achievements'), key: 'achievements', icon: <EmojiEventsIcon />, path: '/achievements' },
-      { text: t('nav.fees'), key: 'fees', icon: <AttachMoneyIcon />, path: '/fees' },
-      { text: t('nav.payments'), key: 'payments', icon: <PaymentIcon />, path: '/payments' },
-      { text: t('nav.messages'), key: 'messages', icon: <MailIcon />, path: '/messages' },
-      { text: t('nav.announcements'), key: 'announcements', icon: <AnnouncementIcon />, path: '/announcements' },
-      { text: t('nav.events'), key: 'events', icon: <EventIcon />, path: '/events' },
-      { text: t('nav.books'), key: 'books', icon: <LibraryBooksIcon />, path: '/books' },
-      { text: t('nav.borrows'), key: 'borrows', icon: <LibraryBooksIcon />, path: '/borrows' },
-      { text: t('nav.routes'), key: 'routes', icon: <RouteIcon />, path: '/routes' },
-      { text: t('nav.vehicles'), key: 'vehicles', icon: <DirectionsBusIcon />, path: '/vehicles' },
-      { text: t('nav.drivers'), key: 'drivers', icon: <PersonIcon />, path: '/drivers' },
-      { text: t('nav.assets'), key: 'assets', icon: <InventoryIcon />, path: '/assets' },
-      { text: t('nav.maintenances'), key: 'maintenances', icon: <BuildIcon />, path: '/maintenances' },
-      { text: t('nav.reports'), key: 'reports', icon: <AssessmentIcon />, path: '/reports' },
-    ];
-  };
+  // Check for rate limit errors (429) from sessionStorage
+  useEffect(() => {
+    const checkRateLimitError = () => {
+      try {
+        const storedError = sessionStorage.getItem('rateLimitError');
+        if (storedError) {
+          const error = JSON.parse(storedError);
+          // Only show if error is recent (within last 2 minutes)
+          if (Date.now() - error.timestamp < 120000) {
+            setRateLimitError(error.message);
+            sessionStorage.removeItem('rateLimitError');
+          } else {
+            sessionStorage.removeItem('rateLimitError');
+          }
+        }
+      } catch (e) {
+        // Ignore parsing errors
+      }
+    };
 
-  const menuItems = getMenuItems();
+    // Check immediately on mount
+    checkRateLimitError();
+    
+    // Listen for storage events (in case error is set from another tab)
+    const handleStorageChange = (e) => {
+      if (e.key === 'rateLimitError') {
+        checkRateLimitError();
+      }
+    };
+    
+    // Listen for custom events from the same window (triggered by API interceptor)
+    const handleCustomEvent = () => {
+      checkRateLimitError();
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('rateLimitError', handleCustomEvent);
+    
+    // Also check periodically (every 500ms) to catch errors set in the same window
+    const intervalId = setInterval(checkRateLimitError, 500);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('rateLimitError', handleCustomEvent);
+      clearInterval(intervalId);
+    };
+  }, []);
+
+  // Menu items based on user role - memoized for performance
+  const menuItems = useMemo(() => {
+    const userRole = user?.role;
+    if (!userRole) return [];
+
+    // Menu items configuration with role-based access
+    const allMenuItems = [
+      { text: t('nav.dashboard'), key: 'dashboard', icon: <DashboardIcon />, path: '/', roles: ['admin', 'teacher', 'student'] },
+      { text: t('parentDashboard.title'), key: 'parent-dashboard', icon: <DashboardIcon />, path: '/parent/dashboard', roles: ['parent'] },
+      { text: t('nav.students'), key: 'students', icon: <PeopleIcon />, path: '/students', roles: ['admin', 'teacher'] },
+      { text: t('nav.teachers'), key: 'teachers', icon: <SchoolIcon />, path: '/teachers', roles: ['admin'] },
+      { text: t('nav.parents'), key: 'parents', icon: <FamilyRestroomIcon />, path: '/parents', roles: ['admin'] },
+      { text: t('nav.classes'), key: 'classes', icon: <ClassIcon />, path: '/classes', roles: ['admin', 'teacher'] },
+      { text: t('nav.subjects'), key: 'subjects', icon: <BookIcon />, path: '/subjects', roles: ['admin', 'teacher'] },
+      { text: t('nav.timetables'), key: 'timetables', icon: <ScheduleIcon />, path: '/timetables', roles: ['admin', 'teacher'] },
+      { text: t('parentTimetable.title'), key: 'parent-timetable', icon: <ScheduleIcon />, path: '/parent/timetable', roles: ['parent'] },
+      { text: t('nav.attendance'), key: 'attendance', icon: <AssignmentIcon />, path: '/attendance', roles: ['admin', 'teacher'] },
+      { text: t('parentAttendance.title'), key: 'parent-attendance', icon: <AssignmentIcon />, path: '/parent/attendance', roles: ['parent'] },
+      { text: t('nav.exams'), key: 'exams', icon: <QuizIcon />, path: '/exams', roles: ['admin', 'teacher'] },
+      { text: t('nav.grades'), key: 'grades', icon: <GradeIcon />, path: '/grades', roles: ['admin', 'teacher', 'student'] },
+      { text: t('parentGrades.title'), key: 'parent-grades', icon: <GradeIcon />, path: '/parent/grades', roles: ['parent'] },
+      { text: t('nav.behaviors'), key: 'behaviors', icon: <PsychologyIcon />, path: '/behaviors', roles: ['admin', 'teacher'] },
+      { text: t('nav.achievements'), key: 'achievements', icon: <EmojiEventsIcon />, path: '/achievements', roles: ['admin', 'teacher', 'student'] },
+      { text: t('nav.fees'), key: 'fees', icon: <AttachMoneyIcon />, path: '/fees', roles: ['admin'] },
+      { text: t('parentFees.title'), key: 'parent-fees', icon: <AttachMoneyIcon />, path: '/parent/fees', roles: ['parent'] },
+      { text: t('nav.payments'), key: 'payments', icon: <PaymentIcon />, path: '/payments', roles: ['admin'] },
+      { text: t('nav.messages'), key: 'messages', icon: <MailIcon />, path: '/messages', roles: ['admin', 'teacher', 'parent', 'student'] },
+      { text: t('nav.announcements'), key: 'announcements', icon: <AnnouncementIcon />, path: '/announcements', roles: ['admin', 'teacher', 'parent', 'student'] },
+      { text: t('nav.events'), key: 'events', icon: <EventIcon />, path: '/events', roles: ['admin', 'teacher', 'parent', 'student'] },
+      { text: t('nav.books'), key: 'books', icon: <LibraryBooksIcon />, path: '/books', roles: ['admin', 'teacher', 'student'] },
+      { text: t('nav.borrows'), key: 'borrows', icon: <LibraryBooksIcon />, path: '/borrows', roles: ['admin', 'teacher', 'student'] },
+      { text: t('nav.routes'), key: 'routes', icon: <RouteIcon />, path: '/routes', roles: ['admin'] },
+      { text: t('nav.vehicles'), key: 'vehicles', icon: <DirectionsBusIcon />, path: '/vehicles', roles: ['admin'] },
+      { text: t('nav.drivers'), key: 'drivers', icon: <PersonIcon />, path: '/drivers', roles: ['admin'] },
+      { text: t('nav.assets'), key: 'assets', icon: <InventoryIcon />, path: '/assets', roles: ['admin'] },
+      { text: t('nav.maintenances'), key: 'maintenances', icon: <BuildIcon />, path: '/maintenances', roles: ['admin'] },
+      { text: t('nav.reports'), key: 'reports', icon: <AssessmentIcon />, path: '/reports', roles: ['admin'] },
+    ];
+    
+    // Filter menu items based on user role
+    return allMenuItems.filter(item => {
+      // If roles array exists, check if user role is included
+      if (item.roles && Array.isArray(item.roles)) {
+        return item.roles.includes(userRole);
+      }
+      // If no roles specified, don't show (shouldn't happen with proper config)
+      return false;
+    });
+  }, [user?.role, t]);
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -299,6 +352,23 @@ const Layout = ({ children }) => {
           sx={{ width: '100%' }}
         >
           {permissionError || t('common.accessDenied')}
+        </Alert>
+      </Snackbar>
+      
+      {/* Rate Limit Error Snackbar (429 Too Many Requests - Login Only) */}
+      <Snackbar
+        open={!!rateLimitError}
+        autoHideDuration={8000}
+        onClose={() => setRateLimitError(null)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setRateLimitError(null)}
+          severity="warning"
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {rateLimitError || t('common.tooManyLoginAttempts')}
         </Alert>
       </Snackbar>
     </Box>

@@ -1,7 +1,10 @@
 import axios from 'axios';
 
+// Use environment variable for API URL, fallback to relative path for dev/proxy
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -32,6 +35,23 @@ api.interceptors.response.use(
       const retryAfter = error.response.headers['retry-after'];
       const delay = retryAfter ? parseInt(retryAfter) * 1000 : 5000; // Default 5 seconds
       
+      // Check if this is a login request - only show alert for login attempts
+      const isLoginRequest = originalRequest.url?.includes('/auth/login') || 
+                            originalRequest.url?.endsWith('/login');
+      
+      if (isLoginRequest) {
+        // Store error message for display (only for login attempts)
+        const rateLimitError = {
+          message: error.response?.data?.message || 'Too many login attempts. Please wait a moment before trying again.',
+          retryAfter: retryAfter ? parseInt(retryAfter) : null,
+          timestamp: Date.now()
+        };
+        sessionStorage.setItem('rateLimitError', JSON.stringify(rateLimitError));
+        
+        // Trigger custom event for same-window listeners
+        window.dispatchEvent(new CustomEvent('rateLimitError'));
+      }
+      
       // If this request hasn't been retried yet, wait and retry
       if (!originalRequest._retry429) {
         originalRequest._retry429 = true;
@@ -44,9 +64,14 @@ api.interceptors.response.use(
       }
       
       // If already retried, reject with a user-friendly message
+      const errorMessage = isLoginRequest 
+        ? (error.response?.data?.message || 'Too many login attempts. Please wait a moment before trying again.')
+        : (error.response?.data?.message || 'Too many requests. Please wait a moment before trying again.');
+      
       return Promise.reject({
         ...error,
-        message: 'Too many requests. Please wait a moment before trying again.',
+        message: errorMessage,
+        isRateLimitError: true
       });
     }
 

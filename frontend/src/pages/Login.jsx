@@ -38,6 +38,7 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [rateLimitError, setRateLimitError] = useState('');
   // Safely get initial language
   const getInitialLanguage = () => {
     try {
@@ -80,6 +81,45 @@ const Login = () => {
     }
   }, [i18n.language]);
 
+  // Check for rate limit errors (429) from sessionStorage on login page
+  useEffect(() => {
+    const checkRateLimitError = () => {
+      try {
+        const storedError = sessionStorage.getItem('rateLimitError');
+        if (storedError) {
+          const error = JSON.parse(storedError);
+          // Only show if error is recent (within last 2 minutes)
+          if (Date.now() - error.timestamp < 120000) {
+            setRateLimitError(error.message);
+            sessionStorage.removeItem('rateLimitError');
+          } else {
+            sessionStorage.removeItem('rateLimitError');
+          }
+        }
+      } catch (e) {
+        // Ignore parsing errors
+      }
+    };
+
+    // Check immediately on mount
+    checkRateLimitError();
+    
+    // Listen for custom events from API interceptor
+    const handleCustomEvent = () => {
+      checkRateLimitError();
+    };
+    
+    window.addEventListener('rateLimitError', handleCustomEvent);
+    
+    // Also check periodically to catch errors set in the same window
+    const intervalId = setInterval(checkRateLimitError, 500);
+    
+    return () => {
+      window.removeEventListener('rateLimitError', handleCustomEvent);
+      clearInterval(intervalId);
+    };
+  }, []);
+
   const handleLanguageChange = (event) => {
     const newLanguage = event.target.value;
     i18n.changeLanguage(newLanguage).then(() => {
@@ -91,13 +131,19 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setRateLimitError('');
     setLoading(true);
 
     const result = await login(username, password);
     if (result.success) {
       navigate('/');
     } else {
-      setError(result.message || t('auth.loginFailed'));
+      // Check if it's a rate limit error
+      if (result.isRateLimitError || result.message?.includes('too many') || result.message?.includes('Too many')) {
+        setRateLimitError(result.message || t('common.tooManyLoginAttempts'));
+      } else {
+        setError(result.message || t('auth.loginFailed'));
+      }
     }
     setLoading(false);
   };
@@ -284,6 +330,17 @@ const Login = () => {
             }} />
           </Box>
 
+          {/* Rate Limit Error Alert (429 Too Many Requests) */}
+          {rateLimitError && (
+            <Alert 
+              severity="warning" 
+              sx={{ mb: 2 }}
+              onClose={() => setRateLimitError('')}
+            >
+              {rateLimitError || t('common.tooManyLoginAttempts')}
+            </Alert>
+          )}
+          
           {/* Error Alert */}
           {error && (
             <Alert
