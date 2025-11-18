@@ -29,16 +29,10 @@ import ExamDetail from './pages/ExamDetail';
 import GradeDetail from './pages/GradeDetail';
 import FeeDetail from './pages/FeeDetail';
 import PaymentDetail from './pages/PaymentDetail';
-import Messages from './pages/Messages';
 import Announcements from './pages/Announcements';
 import Events from './pages/Events';
 import Books from './pages/Books';
 import Borrows from './pages/Borrows';
-import ParentDashboard from './pages/ParentDashboard';
-import ParentGrades from './pages/ParentGrades';
-import ParentAttendance from './pages/ParentAttendance';
-import ParentFees from './pages/ParentFees';
-import ParentTimetable from './pages/ParentTimetable';
 import RoutesPage from './pages/Routes';
 import Vehicles from './pages/Vehicles';
 import Drivers from './pages/Drivers';
@@ -110,15 +104,6 @@ const AppContent = () => {
                 element={
                   <ProtectedRoute allowedRoles={['admin', 'teacher', 'student']}>
                     <Dashboard />
-                  </ProtectedRoute>
-                }
-              />
-              {/* Redirect parent users to parent dashboard */}
-              <Route
-                path="/parent"
-                element={
-                  <ProtectedRoute allowedRoles={['parent']}>
-                    <Navigate to="/parent/dashboard" replace />
                   </ProtectedRoute>
                 }
               />
@@ -267,14 +252,6 @@ const AppContent = () => {
                 }
               />
               <Route
-                path="/messages"
-                element={
-                  <ProtectedRoute allowedRoles={['admin', 'teacher', 'parent', 'student']}>
-                    <Messages />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
                 path="/announcements"
                 element={
                   <ProtectedRoute allowedRoles={['admin', 'teacher', 'parent', 'student']}>
@@ -303,46 +280,6 @@ const AppContent = () => {
                 element={
                   <ProtectedRoute allowedRoles={['admin', 'teacher', 'student']}>
                     <Borrows />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/parent/dashboard"
-                element={
-                  <ProtectedRoute allowedRoles={['parent']}>
-                    <ParentDashboard />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/parent/grades/:childId?"
-                element={
-                  <ProtectedRoute allowedRoles={['parent']}>
-                    <ParentGrades />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/parent/attendance/:childId?"
-                element={
-                  <ProtectedRoute allowedRoles={['parent']}>
-                    <ParentAttendance />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/parent/fees/:childId?"
-                element={
-                  <ProtectedRoute allowedRoles={['parent']}>
-                    <ParentFees />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/parent/timetable/:childId?"
-                element={
-                  <ProtectedRoute allowedRoles={['parent']}>
-                    <ParentTimetable />
                   </ProtectedRoute>
                 }
               />

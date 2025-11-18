@@ -37,7 +37,6 @@ import PaymentIcon from '@mui/icons-material/Payment';
 import BookIcon from '@mui/icons-material/Book';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import LogoutIcon from '@mui/icons-material/Logout';
-import MailIcon from '@mui/icons-material/Mail';
 import AnnouncementIcon from '@mui/icons-material/Announcement';
 import EventIcon from '@mui/icons-material/Event';
 import LibraryBooksIcon from '@mui/icons-material/LibraryBooks';
@@ -155,25 +154,19 @@ const Layout = ({ children }) => {
     // Menu items configuration with role-based access
     const allMenuItems = [
       { text: t('nav.dashboard'), key: 'dashboard', icon: <DashboardIcon />, path: '/', roles: ['admin', 'teacher', 'student'] },
-      { text: t('parentDashboard.title'), key: 'parent-dashboard', icon: <DashboardIcon />, path: '/parent/dashboard', roles: ['parent'] },
       { text: t('nav.students'), key: 'students', icon: <PeopleIcon />, path: '/students', roles: ['admin', 'teacher'] },
       { text: t('nav.teachers'), key: 'teachers', icon: <SchoolIcon />, path: '/teachers', roles: ['admin'] },
       { text: t('nav.parents'), key: 'parents', icon: <FamilyRestroomIcon />, path: '/parents', roles: ['admin'] },
       { text: t('nav.classes'), key: 'classes', icon: <ClassIcon />, path: '/classes', roles: ['admin', 'teacher'] },
       { text: t('nav.subjects'), key: 'subjects', icon: <BookIcon />, path: '/subjects', roles: ['admin', 'teacher'] },
       { text: t('nav.timetables'), key: 'timetables', icon: <ScheduleIcon />, path: '/timetables', roles: ['admin', 'teacher'] },
-      { text: t('parentTimetable.title'), key: 'parent-timetable', icon: <ScheduleIcon />, path: '/parent/timetable', roles: ['parent'] },
       { text: t('nav.attendance'), key: 'attendance', icon: <AssignmentIcon />, path: '/attendance', roles: ['admin', 'teacher'] },
-      { text: t('parentAttendance.title'), key: 'parent-attendance', icon: <AssignmentIcon />, path: '/parent/attendance', roles: ['parent'] },
       { text: t('nav.exams'), key: 'exams', icon: <QuizIcon />, path: '/exams', roles: ['admin', 'teacher'] },
       { text: t('nav.grades'), key: 'grades', icon: <GradeIcon />, path: '/grades', roles: ['admin', 'teacher', 'student'] },
-      { text: t('parentGrades.title'), key: 'parent-grades', icon: <GradeIcon />, path: '/parent/grades', roles: ['parent'] },
       { text: t('nav.behaviors'), key: 'behaviors', icon: <PsychologyIcon />, path: '/behaviors', roles: ['admin', 'teacher'] },
       { text: t('nav.achievements'), key: 'achievements', icon: <EmojiEventsIcon />, path: '/achievements', roles: ['admin', 'teacher', 'student'] },
       { text: t('nav.fees'), key: 'fees', icon: <AttachMoneyIcon />, path: '/fees', roles: ['admin'] },
-      { text: t('parentFees.title'), key: 'parent-fees', icon: <AttachMoneyIcon />, path: '/parent/fees', roles: ['parent'] },
       { text: t('nav.payments'), key: 'payments', icon: <PaymentIcon />, path: '/payments', roles: ['admin'] },
-      { text: t('nav.messages'), key: 'messages', icon: <MailIcon />, path: '/messages', roles: ['admin', 'teacher', 'parent', 'student'] },
       { text: t('nav.announcements'), key: 'announcements', icon: <AnnouncementIcon />, path: '/announcements', roles: ['admin', 'teacher', 'parent', 'student'] },
       { text: t('nav.events'), key: 'events', icon: <EventIcon />, path: '/events', roles: ['admin', 'teacher', 'parent', 'student'] },
       { text: t('nav.books'), key: 'books', icon: <LibraryBooksIcon />, path: '/books', roles: ['admin', 'teacher', 'student'] },
