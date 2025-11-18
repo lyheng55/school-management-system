@@ -35,7 +35,7 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
       const getDefaultRoute = () => {
         switch (user.role) {
           case 'parent':
-            return '/parent/dashboard';
+            return '/';
           case 'student':
             return '/';
           case 'teacher':

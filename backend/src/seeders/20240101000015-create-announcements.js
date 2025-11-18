@@ -10,7 +10,7 @@ module.exports = {
  
     const now = new Date();
     const announcements = [];
-    const audiences = ['all', 'students', 'teachers', 'parents', 'staff'];
+    const audiences = ['all', 'teachers', 'staff'];
     const priorities = ['low', 'medium', 'high', 'urgent'];
     const titles = [
       'School Holiday Notice',

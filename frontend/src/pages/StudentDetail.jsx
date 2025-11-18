@@ -40,6 +40,7 @@ import FamilyRestroomIcon from '@mui/icons-material/FamilyRestroom';
 import PhoneIcon from '@mui/icons-material/Phone';
 import EmailIcon from '@mui/icons-material/Email';
 import WorkIcon from '@mui/icons-material/Work';
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import Layout from '../components/Layout';
 import api from '../services/api';
 import { useState, useRef } from 'react';
@@ -521,7 +522,19 @@ const StudentDetail = () => {
             {/* Grades Tab */}
             {tabValue === 0 && (
               <Box p={3}>
-                <Typography variant="h6" gutterBottom>{t('nav.grades')}</Typography>
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                  <Typography variant="h6">{t('nav.grades')}</Typography>
+                  <Button
+                    variant="outlined"
+                    color="primary"
+                    startIcon={<PictureAsPdfIcon />}
+                    onClick={() => {
+                      window.open(`${api.defaults.baseURL}/grades/student/${id}/report-card`, '_blank');
+                    }}
+                  >
+                    {t('grades.downloadReportCard') || 'Download Report Card'}
+                  </Button>
+                </Box>
                 {grades && grades.length > 0 ? (
                   <TableContainer>
                     <Table>

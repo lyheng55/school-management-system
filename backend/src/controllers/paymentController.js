@@ -1,11 +1,12 @@
 const { Payment, Fee, Student, User, Class } = require('../models');
 const Joi = require('joi');
 const { Op } = require('sequelize');
+const exportService = require('../utils/exportService');
 
 const paymentSchema = Joi.object({
   fee_id: Joi.number().integer().required(),
   amount: Joi.number().positive().required(),
-  payment_method: Joi.string().valid('cash', 'bank_transfer', 'online', 'cheque', 'other').required(),
+  payment_method: Joi.string().valid('cash', 'bank_transfer', 'cheque', 'other').required(),
   transaction_id: Joi.string().optional().allow('', null),
   payment_date: Joi.date().optional(),
   receipt_number: Joi.string().optional().allow('', null),
@@ -437,6 +438,61 @@ exports.getStudentPayments = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching student payments',
+      error: error.message
+    });
+  }
+};
+
+// Generate Payment Receipt PDF
+exports.generateReceipt = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Fetch payment with all related data
+    const payment = await Payment.findByPk(id, {
+      include: [
+        { 
+          model: Fee, 
+          as: 'fee', 
+          include: [
+            { model: Student, as: 'student', include: [{ model: Class, as: 'class' }] }
+          ]
+        },
+        { model: User, as: 'processedBy', attributes: ['id', 'username', 'email'], required: false, foreignKey: 'processed_by' }
+      ]
+    });
+
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Payment not found'
+      });
+    }
+
+    const fee = payment.fee;
+    const student = fee?.student;
+
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        message: 'Student information not found for this payment'
+      });
+    }
+
+    // Generate PDF
+    const pdfBuffer = await exportService.generatePaymentReceiptPDF(payment, fee, student);
+
+    const filename = `receipt-${payment.receipt_number || payment.id}-${Date.now()}.pdf`;
+    
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error('Generate receipt error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error generating receipt',
       error: error.message
     });
   }

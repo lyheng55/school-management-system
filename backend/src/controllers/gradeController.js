@@ -1,6 +1,7 @@
 const { Grade, Student, Exam, Subject, User, Class } = require('../models');
 const Joi = require('joi');
 const { Op } = require('sequelize');
+const exportService = require('../utils/exportService');
 
 const gradeSchema = Joi.object({
   student_id: Joi.number().integer().required(),
@@ -374,6 +375,55 @@ exports.bulkCreateGrades = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error processing bulk grades',
+      error: error.message
+    });
+  }
+};
+
+// Generate Report Card PDF
+exports.generateReportCard = async (req, res) => {
+  try {
+    const { student_id } = req.params;
+    const { academic_year } = req.query;
+
+    // Fetch student with class information
+    const student = await Student.findByPk(student_id, {
+      include: [
+        { model: Class, as: 'class' }
+      ]
+    });
+
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        message: 'Student not found'
+      });
+    }
+
+    // Fetch all grades for the student
+    const grades = await Grade.findAll({
+      where: { student_id },
+      include: [
+        { model: Exam, as: 'exam' },
+        { model: Subject, as: 'subject' }
+      ],
+      order: [['created_at', 'DESC']]
+    });
+
+    // Generate PDF
+    const pdfBuffer = await exportService.generateReportCardPDF(student, grades, academic_year);
+
+    const filename = `report-card-${student.student_id || student.id}-${Date.now()}.pdf`;
+    
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error('Generate report card error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error generating report card',
       error: error.message
     });
   }

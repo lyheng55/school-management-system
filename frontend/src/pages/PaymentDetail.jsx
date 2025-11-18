@@ -19,6 +19,8 @@ import PaymentIcon from '@mui/icons-material/Payment';
 import PersonIcon from '@mui/icons-material/Person';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import ReceiptIcon from '@mui/icons-material/Receipt';
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+import DownloadIcon from '@mui/icons-material/Download';
 import Layout from '../components/Layout';
 import api from '../services/api';
 
@@ -134,6 +136,20 @@ const PaymentDetail = () => {
                   <Typography variant="body1">
                     {payment.fee?.student?.class?.name || t('common.none')}
                   </Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <Button
+                    variant="outlined"
+                    color="primary"
+                    startIcon={<PictureAsPdfIcon />}
+                    fullWidth
+                    onClick={() => {
+                      window.open(`${api.defaults.baseURL}/payments/${id}/receipt`, '_blank');
+                    }}
+                    sx={{ mb: 1 }}
+                  >
+                    {t('payments.downloadReceipt') || 'Download Receipt'}
+                  </Button>
                 </Grid>
                 <Grid item xs={12}>
                   <Button

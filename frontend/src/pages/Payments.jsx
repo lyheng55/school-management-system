@@ -222,7 +222,6 @@ const Payments = () => {
     const colors = {
       cash: 'success',
       bank_transfer: 'info',
-      online: 'primary',
       cheque: 'warning',
       other: 'default',
     };
@@ -253,7 +252,6 @@ const Payments = () => {
             <MenuItem value="">{t('common.all')}</MenuItem>
             <MenuItem value="cash">{t('payments.cash')}</MenuItem>
             <MenuItem value="bank_transfer">{t('payments.bankTransfer')}</MenuItem>
-            <MenuItem value="online">{t('payments.online')}</MenuItem>
             <MenuItem value="cheque">{t('payments.cheque')}</MenuItem>
             <MenuItem value="other">{t('common.other')}</MenuItem>
           </Select>
@@ -435,7 +433,6 @@ const Payments = () => {
                     <MenuItem value="">{t('common.select')}</MenuItem>
                     <MenuItem value="cash">{t('payments.cash')}</MenuItem>
                     <MenuItem value="bank_transfer">{t('payments.bankTransfer')}</MenuItem>
-                    <MenuItem value="online">{t('payments.online')}</MenuItem>
                     <MenuItem value="cheque">{t('payments.cheque')}</MenuItem>
                     <MenuItem value="other">{t('common.other')}</MenuItem>
                   </Select>

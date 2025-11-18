@@ -925,3 +925,372 @@ function generateAttendanceExcel(worksheet, data, startRow) {
 
   return row;
 }
+
+/**
+ * Generate Report Card PDF for a specific student
+ */
+exports.generateReportCardPDF = async (student, grades, academicYear = null) => {
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({ 
+        margin: 50,
+        size: 'A4',
+        info: {
+          Title: `Report Card - ${student.first_name} ${student.last_name}`,
+          Author: 'School Management System',
+          Subject: 'Student Report Card',
+          Creator: 'School Management System'
+        }
+      });
+      const chunks = [];
+
+      doc.on('data', chunk => chunks.push(chunk));
+      doc.on('end', () => {
+        try {
+          resolve(Buffer.concat(chunks));
+        } catch (error) {
+          reject(new Error(`Failed to create PDF buffer: ${error.message}`));
+        }
+      });
+      doc.on('error', (error) => {
+        reject(new Error(`PDF generation error: ${error.message}`));
+      });
+
+      // Header
+      const headerHeight = 100;
+      doc.rect(0, 0, doc.page.width, headerHeight)
+        .fillColor(COLORS.header)
+        .fill();
+      
+      doc.fillColor('#ffffff')
+        .fontSize(24)
+        .font('Helvetica-Bold')
+        .text('SCHOOL MANAGEMENT SYSTEM', 50, 20, { align: 'center', width: doc.page.width - 100 });
+      
+      doc.fontSize(18)
+        .font('Helvetica')
+        .text('STUDENT REPORT CARD', 50, 50, { align: 'center', width: doc.page.width - 100 });
+
+      if (academicYear) {
+        doc.fontSize(12)
+          .text(`Academic Year: ${academicYear}`, 50, 75, { align: 'center', width: doc.page.width - 100 });
+      }
+
+      let yPos = headerHeight + 30;
+
+      // Student Information Box
+      doc.rect(50, yPos, doc.page.width - 100, 100)
+        .fillColor(COLORS.lightGray)
+        .fill()
+        .strokeColor(COLORS.border)
+        .lineWidth(1)
+        .stroke();
+      
+      doc.fillColor(COLORS.text)
+        .fontSize(12)
+        .font('Helvetica-Bold')
+        .text('Student Information', 60, yPos + 10);
+      
+      doc.fontSize(10)
+        .font('Helvetica')
+        .text(`Name: ${student.first_name} ${student.last_name}`, 60, yPos + 30)
+        .text(`Student ID: ${student.student_id || 'N/A'}`, 60, yPos + 45)
+        .text(`Class: ${student.class?.name || 'N/A'}`, 60, yPos + 60)
+        .text(`Date of Birth: ${student.date_of_birth ? new Date(student.date_of_birth).toLocaleDateString() : 'N/A'}`, 60, yPos + 75);
+
+      yPos += 120;
+
+      // Grades Table
+      if (grades && grades.length > 0) {
+        // Group grades by exam
+        const gradesByExam = {};
+        grades.forEach(grade => {
+          const examName = grade.exam?.name || 'Unknown Exam';
+          if (!gradesByExam[examName]) {
+            gradesByExam[examName] = [];
+          }
+          gradesByExam[examName].push(grade);
+        });
+
+        Object.keys(gradesByExam).forEach(examName => {
+          const examGrades = gradesByExam[examName];
+          
+          // Exam Header
+          doc.fillColor(COLORS.header)
+            .fontSize(12)
+            .font('Helvetica-Bold')
+            .text(examName, 50, yPos);
+          
+          yPos += 20;
+
+          // Table Headers
+          const tableTop = yPos;
+          const tableLeft = 50;
+          const tableWidth = doc.page.width - 100;
+          const colWidths = [tableWidth * 0.4, tableWidth * 0.2, tableWidth * 0.2, tableWidth * 0.2];
+          
+          doc.fillColor(COLORS.header)
+            .rect(tableLeft, tableTop, tableWidth, 25)
+            .fill();
+          
+          doc.fillColor('#ffffff')
+            .fontSize(10)
+            .font('Helvetica-Bold')
+            .text('Subject', tableLeft + 5, tableTop + 8)
+            .text('Marks', tableLeft + colWidths[0] + 5, tableTop + 8)
+            .text('Total', tableLeft + colWidths[0] + colWidths[1] + 5, tableTop + 8)
+            .text('Grade', tableLeft + colWidths[0] + colWidths[1] + colWidths[2] + 5, tableTop + 8);
+
+          yPos += 25;
+
+          // Table Rows
+          let totalMarks = 0;
+          let totalObtained = 0;
+          
+          examGrades.forEach((grade, index) => {
+            const rowY = yPos + (index * 20);
+            const marksObtained = grade.marks_obtained || 0;
+            const totalMarksForSubject = grade.exam?.total_marks || 100;
+            
+            totalMarks += totalMarksForSubject;
+            totalObtained += marksObtained;
+
+            doc.fillColor(index % 2 === 0 ? '#ffffff' : COLORS.lightGray)
+              .rect(tableLeft, rowY, tableWidth, 20)
+              .fill();
+            
+            doc.fillColor(COLORS.text)
+              .fontSize(9)
+              .font('Helvetica')
+              .text(grade.subject?.name || 'Unknown', tableLeft + 5, rowY + 6)
+              .text(marksObtained.toString(), tableLeft + colWidths[0] + 5, rowY + 6)
+              .text(totalMarksForSubject.toString(), tableLeft + colWidths[0] + colWidths[1] + 5, rowY + 6)
+              .text(grade.grade || 'N/A', tableLeft + colWidths[0] + colWidths[1] + colWidths[2] + 5, rowY + 6);
+          });
+
+          yPos += (examGrades.length * 20) + 10;
+
+          // Total Row
+          const percentage = totalMarks > 0 ? ((totalObtained / totalMarks) * 100).toFixed(2) : 0;
+          doc.fillColor(COLORS.success)
+            .rect(tableLeft, yPos, tableWidth, 25)
+            .fill();
+          
+          doc.fillColor('#ffffff')
+            .fontSize(10)
+            .font('Helvetica-Bold')
+            .text('TOTAL', tableLeft + 5, yPos + 8)
+            .text(totalObtained.toString(), tableLeft + colWidths[0] + 5, yPos + 8)
+            .text(totalMarks.toString(), tableLeft + colWidths[0] + colWidths[1] + 5, yPos + 8)
+            .text(`${percentage}%`, tableLeft + colWidths[0] + colWidths[1] + colWidths[2] + 5, yPos + 8);
+
+          yPos += 35;
+
+          // Check if we need a new page
+          if (yPos > doc.page.height - 100) {
+            doc.addPage();
+            yPos = 50;
+          }
+        });
+      } else {
+        doc.fillColor(COLORS.text)
+          .fontSize(12)
+          .text('No grades available for this student.', 50, yPos);
+      }
+
+      // Footer
+      let pageNumber = 0;
+      const addFooter = () => {
+        pageNumber++;
+        const pageHeight = doc.page.height;
+        const pageWidth = doc.page.width;
+        doc.fontSize(8)
+          .fillColor('#666666')
+          .text(
+            `Page ${pageNumber} | Generated: ${new Date().toLocaleString()}`,
+            pageWidth / 2,
+            pageHeight - 30,
+            { align: 'center', width: pageWidth - 100 }
+          );
+      };
+
+      doc.on('page', addFooter);
+      doc.end();
+    } catch (error) {
+      reject(error);
+    }
+  });
+};
+
+/**
+ * Generate Payment Receipt PDF
+ */
+exports.generatePaymentReceiptPDF = async (payment, fee, student) => {
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({ 
+        margin: 50,
+        size: 'A4',
+        info: {
+          Title: `Payment Receipt - ${payment.receipt_number}`,
+          Author: 'School Management System',
+          Subject: 'Payment Receipt',
+          Creator: 'School Management System'
+        }
+      });
+      const chunks = [];
+
+      doc.on('data', chunk => chunks.push(chunk));
+      doc.on('end', () => {
+        try {
+          resolve(Buffer.concat(chunks));
+        } catch (error) {
+          reject(new Error(`Failed to create PDF buffer: ${error.message}`));
+        }
+      });
+      doc.on('error', (error) => {
+        reject(new Error(`PDF generation error: ${error.message}`));
+      });
+
+      // Header
+      const headerHeight = 80;
+      doc.rect(0, 0, doc.page.width, headerHeight)
+        .fillColor(COLORS.header)
+        .fill();
+      
+      doc.fillColor('#ffffff')
+        .fontSize(24)
+        .font('Helvetica-Bold')
+        .text('SCHOOL MANAGEMENT SYSTEM', 50, 20, { align: 'center', width: doc.page.width - 100 });
+      
+      doc.fontSize(18)
+        .font('Helvetica')
+        .text('PAYMENT RECEIPT', 50, 50, { align: 'center', width: doc.page.width - 100 });
+
+      let yPos = headerHeight + 40;
+
+      // Receipt Number (Large)
+      doc.fillColor(COLORS.text)
+        .fontSize(16)
+        .font('Helvetica-Bold')
+        .text(`Receipt No: ${payment.receipt_number || 'N/A'}`, 50, yPos, { align: 'right', width: doc.page.width - 100 });
+
+      yPos += 30;
+
+      // Receipt Details Box
+      doc.rect(50, yPos, doc.page.width - 100, 200)
+        .fillColor(COLORS.lightGray)
+        .fill()
+        .strokeColor(COLORS.border)
+        .lineWidth(1)
+        .stroke();
+      
+      doc.fillColor(COLORS.text)
+        .fontSize(12)
+        .font('Helvetica-Bold')
+        .text('Payment Details', 60, yPos + 15);
+      
+      doc.fontSize(10)
+        .font('Helvetica')
+        .text(`Date: ${payment.payment_date ? new Date(payment.payment_date).toLocaleDateString() : 'N/A'}`, 60, yPos + 40)
+        .text(`Payment Method: ${payment.payment_method ? payment.payment_method.replace('_', ' ').toUpperCase() : 'N/A'}`, 60, yPos + 55)
+        .text(`Amount: $${parseFloat(payment.amount || 0).toFixed(2)}`, 60, yPos + 70);
+
+      if (payment.transaction_id) {
+        doc.text(`Transaction ID: ${payment.transaction_id}`, 60, yPos + 85);
+      }
+
+      yPos += 100;
+
+      // Student Information
+      doc.fontSize(12)
+        .font('Helvetica-Bold')
+        .text('Student Information', 60, yPos);
+      
+      doc.fontSize(10)
+        .font('Helvetica')
+        .text(`Name: ${student.first_name} ${student.last_name}`, 60, yPos + 20)
+        .text(`Student ID: ${student.student_id || 'N/A'}`, 60, yPos + 35)
+        .text(`Class: ${student.class?.name || 'N/A'}`, 60, yPos + 50);
+
+      yPos += 80;
+
+      // Fee Information
+      if (fee) {
+        doc.fontSize(12)
+          .font('Helvetica-Bold')
+          .text('Fee Information', 60, yPos);
+        
+        doc.fontSize(10)
+          .font('Helvetica')
+          .text(`Fee Type: ${fee.fee_type || 'N/A'}`, 60, yPos + 20)
+          .text(`Total Amount: $${parseFloat(fee.amount || 0).toFixed(2)}`, 60, yPos + 35)
+          .text(`Due Date: ${fee.due_date ? new Date(fee.due_date).toLocaleDateString() : 'N/A'}`, 60, yPos + 50);
+      }
+
+      yPos += 100;
+
+      // Amount in Words (optional)
+      const amountInWords = convertNumberToWords(parseFloat(payment.amount || 0));
+      doc.fontSize(10)
+        .font('Helvetica')
+        .text(`Amount in Words: ${amountInWords}`, 60, yPos, { width: doc.page.width - 120 });
+
+      yPos += 40;
+
+      // Notes
+      if (payment.notes) {
+        doc.fontSize(10)
+          .font('Helvetica')
+          .text(`Notes: ${payment.notes}`, 60, yPos, { width: doc.page.width - 120 });
+        yPos += 30;
+      }
+
+      // Footer with signature line
+      yPos = doc.page.height - 120;
+      doc.strokeColor(COLORS.border)
+        .lineWidth(1)
+        .moveTo(60, yPos)
+        .lineTo(250, yPos)
+        .stroke();
+      
+      doc.fontSize(9)
+        .fillColor('#666666')
+        .text('Authorized Signature', 60, yPos + 5);
+
+      // Footer
+      doc.fontSize(8)
+        .fillColor('#666666')
+        .text(
+          `Generated: ${new Date().toLocaleString()} | School Management System`,
+          doc.page.width / 2,
+          doc.page.height - 30,
+          { align: 'center', width: doc.page.width - 100 }
+        );
+
+      doc.end();
+    } catch (error) {
+      reject(error);
+    }
+  });
+};
+
+// Helper function to convert number to words (simple implementation)
+function convertNumberToWords(num) {
+  const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
+    'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+  const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+  if (num === 0) return 'Zero';
+  if (num < 20) return ones[Math.floor(num)];
+  if (num < 100) {
+    return tens[Math.floor(num / 10)] + (num % 10 !== 0 ? ' ' + ones[num % 10] : '');
+  }
+  if (num < 1000) {
+    return ones[Math.floor(num / 100)] + ' Hundred' + (num % 100 !== 0 ? ' ' + convertNumberToWords(num % 100) : '');
+  }
+  if (num < 1000000) {
+    return convertNumberToWords(Math.floor(num / 1000)) + ' Thousand' + (num % 1000 !== 0 ? ' ' + convertNumberToWords(num % 1000) : '');
+  }
+  return 'Large Amount';
+}

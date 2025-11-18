@@ -5,7 +5,7 @@ const { Op } = require('sequelize');
 const announcementSchema = Joi.object({
   title: Joi.string().max(200).required(),
   content: Joi.string().required().min(1),
-  target_audience: Joi.string().valid('all', 'students', 'teachers', 'parents', 'staff').optional(),
+  target_audience: Joi.string().valid('all', 'teachers', 'staff').optional(),
   priority: Joi.string().valid('low', 'medium', 'high', 'urgent').optional(),
   published_at: Joi.date().optional().allow(null),
   expires_at: Joi.date().optional().allow(null),

@@ -25,7 +25,7 @@ module.exports = {
 
     const now = new Date();
     const payments = [];
-    const paymentMethods = ['cash', 'bank_transfer', 'online', 'cheque'];
+    const paymentMethods = ['cash', 'bank_transfer', 'cheque', 'other'];
 
     fees.forEach((fee, feeIdx) => {
       // For paid fees, create full payment

@@ -228,9 +228,7 @@ const Announcements = () => {
                 >
                   <MenuItem value="">{t('common.all')}</MenuItem>
                   <MenuItem value="all">{t('announcements.all')}</MenuItem>
-                  <MenuItem value="students">{t('common.students')}</MenuItem>
                   <MenuItem value="teachers">{t('nav.teachers')}</MenuItem>
-                  <MenuItem value="parents">{t('students.parent')}</MenuItem>
                   <MenuItem value="staff">{t('announcements.staff')}</MenuItem>
                 </Select>
               </FormControl>
@@ -420,9 +418,7 @@ const Announcements = () => {
                     onChange={(e) => setFormData({ ...formData, target_audience: e.target.value })}
                   >
                     <MenuItem value="all">{t('announcements.all')}</MenuItem>
-                    <MenuItem value="students">{t('common.students')}</MenuItem>
                     <MenuItem value="teachers">{t('nav.teachers')}</MenuItem>
-                    <MenuItem value="parents">{t('students.parent')}</MenuItem>
                     <MenuItem value="staff">{t('announcements.staff')}</MenuItem>
                   </Select>
                 </FormControl>

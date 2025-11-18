@@ -16,7 +16,7 @@ const Announcement = sequelize.define('Announcement', {
     allowNull: false
   },
   target_audience: {
-    type: DataTypes.ENUM('all', 'students', 'teachers', 'parents', 'staff'),
+    type: DataTypes.ENUM('all', 'teachers', 'staff'),
     defaultValue: 'all'
   },
   priority: {
