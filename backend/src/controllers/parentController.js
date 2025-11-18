@@ -7,7 +7,15 @@ const parentSchema = Joi.object({
   user_id: Joi.number().integer().optional(),
   first_name: Joi.string().required(),
   last_name: Joi.string().required(),
-  phone: Joi.string().required(),
+  phone: Joi.string()
+    .pattern(/^[+]?[(]?[0-9]{1,4}[)]?[-\s.]?[(]?[0-9]{1,4}[)]?[-\s.]?[0-9]{1,9}$/)
+    .required()
+    .messages({
+      'string.pattern.base': 'Phone number format is invalid. Please use a valid phone number format.'
+    }),
+  email: Joi.string().email().optional().allow('', null).messages({
+    'string.email': 'Email must be a valid email address'
+  }),
   occupation: Joi.string().optional().allow('', null),
   address: Joi.string().optional().allow('', null),
   relationship: Joi.string().valid('father', 'mother', 'guardian', 'other').required(),
@@ -604,6 +612,7 @@ exports.getParentById = async (req, res) => {
 };
 
 exports.createParent = async (req, res) => {
+  let transaction;
   try {
     const { error, value } = parentSchema.validate(req.body);
     if (error) {
@@ -612,6 +621,9 @@ exports.createParent = async (req, res) => {
         message: error.details[0].message
       });
     }
+
+    // Start transaction for database operations
+    transaction = await sequelize.transaction();
 
     // If user_id is provided, use it; otherwise create a new user account
     let userId = value.user_id;
@@ -622,10 +634,25 @@ exports.createParent = async (req, res) => {
       let username = baseUsername;
       let counter = 1;
       
-      // Ensure username is unique
-      while (await User.findOne({ where: { username } })) {
+      // Ensure username is unique (check before transaction to avoid unnecessary rollbacks)
+      while (await User.findOne({ where: { username }, transaction })) {
         username = `${baseUsername}${counter}`;
         counter++;
+      }
+
+      // Check if email is already taken (if provided)
+      if (value.email && value.email.trim() !== '') {
+        const existingUserWithEmail = await User.findOne({
+          where: { email: value.email.trim() },
+          transaction
+        });
+        if (existingUserWithEmail) {
+          await transaction.rollback();
+          return res.status(400).json({
+            success: false,
+            message: 'Email is already taken by another user'
+          });
+        }
       }
 
       // Create user account with default password
@@ -634,28 +661,31 @@ exports.createParent = async (req, res) => {
         username,
         password: defaultPassword,
         role: 'parent',
-        email: null
-      });
+        email: value.email && value.email.trim() !== '' ? value.email.trim() : null
+      }, { transaction });
       
       userId = user.id;
     } else {
-      // Verify user exists and has parent role
-      const user = await User.findByPk(userId);
+      // Verify user exists and has parent role (check before transaction)
+      const user = await User.findByPk(userId, { transaction });
       if (!user) {
+        await transaction.rollback();
         return res.status(400).json({
           success: false,
           message: 'User not found'
         });
       }
       if (user.role !== 'parent') {
+        await transaction.rollback();
         return res.status(400).json({
           success: false,
           message: 'User must have parent role'
         });
       }
       // Check if parent already exists for this user
-      const existingParent = await Parent.findOne({ where: { user_id: userId } });
+      const existingParent = await Parent.findOne({ where: { user_id: userId }, transaction });
       if (existingParent) {
+        await transaction.rollback();
         return res.status(400).json({
           success: false,
           message: 'Parent profile already exists for this user'
@@ -670,15 +700,58 @@ exports.createParent = async (req, res) => {
     const parent = await Parent.create({
       ...parentData,
       user_id: userId
-    });
+    }, { transaction });
 
     // Assign students to parent if student_ids provided
     if (student_ids && Array.isArray(student_ids) && student_ids.length > 0) {
+      // Validate that all student IDs exist
+      const existingStudents = await Student.findAll({
+        where: { id: { [Op.in]: student_ids } },
+        include: [
+          { 
+            model: Parent, 
+            as: 'parent', 
+            attributes: ['id', 'first_name', 'last_name'],
+            required: false 
+          }
+        ],
+        transaction
+      });
+      
+      if (existingStudents.length !== student_ids.length) {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          message: 'One or more student IDs are invalid'
+        });
+      }
+
+      // Check if any students already have a different parent assigned
+      const studentsWithParents = existingStudents.filter(s => s.parent_id !== null);
+      if (studentsWithParents.length > 0) {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          message: 'Some students already have parents assigned',
+          data: {
+            students: studentsWithParents.map(s => ({
+              student_id: s.id,
+              student_name: `${s.first_name} ${s.last_name}`,
+              current_parent_id: s.parent_id,
+              current_parent_name: s.parent ? `${s.parent.first_name} ${s.parent.last_name}` : null
+            }))
+          }
+        });
+      }
+
       await Student.update(
         { parent_id: parent.id },
-        { where: { id: student_ids } }
+        { where: { id: student_ids }, transaction }
       );
     }
+
+    // Commit transaction before fetching relations (to ensure data is persisted)
+    await transaction.commit();
 
     const parentWithRelations = await Parent.findByPk(parent.id, {
       include: [
@@ -695,6 +768,14 @@ exports.createParent = async (req, res) => {
       }
     });
   } catch (error) {
+    // Rollback transaction if it was started
+    if (transaction) {
+      try {
+        await transaction.rollback();
+      } catch (rollbackError) {
+        console.error('Transaction rollback error:', rollbackError);
+      }
+    }
     console.error('Create parent error:', error);
     res.status(500).json({
       success: false,
@@ -722,24 +803,95 @@ exports.updateParent = async (req, res) => {
       });
     }
 
-    // Extract student_ids before updating parent
-    const { student_ids, ...parentData } = value;
+    // Extract student_ids and email before updating parent
+    const { student_ids, email, ...parentData } = value;
     
+    // Update parent record
     await parent.update(parentData);
+    
+    // Update user email if provided (email is stored in User model)
+    if (email !== undefined && parent.user_id) {
+      const user = await User.findByPk(parent.user_id);
+      if (user) {
+        // Check if email is already taken by another user
+        if (email && email.trim() !== '') {
+          const existingUser = await User.findOne({
+            where: {
+              email: email.trim(),
+              id: { [Op.ne]: parent.user_id }
+            }
+          });
+          if (existingUser) {
+            return res.status(400).json({
+              success: false,
+              message: 'Email is already taken by another user'
+            });
+          }
+        }
+        await user.update({ email: email && email.trim() !== '' ? email.trim() : null });
+      }
+    }
 
     // Update student assignments if student_ids provided
     if (student_ids !== undefined) {
-      // Remove parent_id from students currently assigned to this parent
-      await Student.update(
-        { parent_id: null },
-        { where: { parent_id: parent.id } }
-      );
-
       // Assign new students to this parent
       if (Array.isArray(student_ids) && student_ids.length > 0) {
+        // Validate that all student IDs exist
+        const existingStudents = await Student.findAll({
+          where: { id: { [Op.in]: student_ids } },
+          include: [
+            { 
+              model: Parent, 
+              as: 'parent', 
+              attributes: ['id', 'first_name', 'last_name'],
+              required: false 
+            }
+          ]
+        });
+        
+        if (existingStudents.length !== student_ids.length) {
+          return res.status(400).json({
+            success: false,
+            message: 'One or more student IDs are invalid'
+          });
+        }
+
+        // Check if any students already have a different parent assigned (not this parent)
+        const studentsWithOtherParents = existingStudents.filter(
+          s => s.parent_id !== null && s.parent_id !== parent.id
+        );
+        
+        if (studentsWithOtherParents.length > 0) {
+          return res.status(400).json({
+            success: false,
+            message: 'Some students are already assigned to different parents',
+            data: {
+              students: studentsWithOtherParents.map(s => ({
+                student_id: s.id,
+                student_name: `${s.first_name} ${s.last_name}`,
+                current_parent_id: s.parent_id,
+                current_parent_name: s.parent ? `${s.parent.first_name} ${s.parent.last_name}` : null
+              }))
+            }
+          });
+        }
+
+        // Remove parent_id from students currently assigned to this parent
+        await Student.update(
+          { parent_id: null },
+          { where: { parent_id: parent.id } }
+        );
+
+        // Assign new students to this parent
         await Student.update(
           { parent_id: parent.id },
           { where: { id: student_ids } }
+        );
+      } else {
+        // If empty array, just remove all current assignments
+        await Student.update(
+          { parent_id: null },
+          { where: { parent_id: parent.id } }
         );
       }
     }

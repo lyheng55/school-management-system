@@ -55,6 +55,7 @@ const Parents = () => {
     first_name: '',
     last_name: '',
     phone: '',
+    email: '',
     occupation: '',
     address: '',
     relationship: '',
@@ -207,6 +208,7 @@ const Parents = () => {
         first_name: parent.first_name || '',
         last_name: parent.last_name || '',
         phone: parent.phone || '',
+        email: parent.user?.email || '',
         occupation: parent.occupation || '',
         address: parent.address || '',
         relationship: parent.relationship || '',
@@ -217,6 +219,7 @@ const Parents = () => {
         first_name: '',
         last_name: '',
         phone: '',
+        email: '',
         occupation: '',
         address: '',
         relationship: '',
@@ -234,6 +237,7 @@ const Parents = () => {
       first_name: '',
       last_name: '',
       phone: '',
+      email: '',
       occupation: '',
       address: '',
       relationship: '',
@@ -492,6 +496,20 @@ const Parents = () => {
                     setFormData({ ...formData, phone: e.target.value })
                   }
                   required
+                  error={formData.phone && !/^[+]?[(]?[0-9]{1,4}[)]?[-\s.]?[(]?[0-9]{1,4}[)]?[-\s.]?[0-9]{1,9}$/.test(formData.phone)}
+                  helperText={formData.phone && !/^[+]?[(]?[0-9]{1,4}[)]?[-\s.]?[(]?[0-9]{1,4}[)]?[-\s.]?[0-9]{1,9}$/.test(formData.phone) ? 'Invalid phone number format' : ''}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label={t('common.email')}
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
+                  helperText="Optional"
                 />
               </Grid>
               <Grid item xs={12}>
