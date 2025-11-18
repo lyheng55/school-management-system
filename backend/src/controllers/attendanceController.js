@@ -55,9 +55,8 @@ exports.markAttendance = async (req, res) => {
         const parent = student?.parent;
         const parentUser = parent?.user;
         
-        // Check if parent has telegram_chat_id (we'll add this field later)
-        // For now, check if there's a telegram_chat_id in user model or use a config
-        const telegramChatId = parentUser?.telegram_chat_id || process.env[`TELEGRAM_CHAT_${parentUser?.id}`];
+        // Get parent's Telegram chat ID from User model
+        const telegramChatId = parentUser?.telegram_chat_id;
         
         if (telegramChatId && student) {
           await telegramService.sendAttendanceAlert(telegramChatId, {
@@ -141,7 +140,7 @@ exports.bulkMarkAttendance = async (req, res) => {
 
             if (studentRecord?.parent?.user) {
               const parentUser = studentRecord.parent.user;
-              const telegramChatId = parentUser.telegram_chat_id || process.env[`TELEGRAM_CHAT_${parentUser.id}`];
+              const telegramChatId = parentUser.telegram_chat_id;
               
               if (telegramChatId) {
                 await telegramService.sendAttendanceAlert(telegramChatId, {
